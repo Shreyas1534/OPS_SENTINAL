@@ -1,0 +1,17 @@
+safety:
+  engine_temperature:
+    normal_max: 95
+    warning_max: 100
+    critical_min: 105
+  tyre_pressure:
+    normal_min: 30
+    normal_max: 35
+    warning_min: 25
+    critical_max: 20
+
+maintenance:
+  stale_data_threshold_hours: 336
+  max_open_work_orders: 2
+
+orchestration:
+  max_iterations: 3

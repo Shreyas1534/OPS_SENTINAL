@@ -1,0 +1,4091 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ops Sentinel — Fleet Command</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --void-950: #05070d;
+      --void-900: #080b14;
+      --void-800: #0b0f1a;
+      --void-700: #0f1420;
+      --void-600: #141b2b;
+      --signal-400: #5fd4ff;
+      --signal-500: #22d3ee;
+      --signal-600: #0ea5c7;
+      --signal-glow: #3b82f6;
+      --risk-low: #22c55e;
+      --risk-medium: #f59e0b;
+      --risk-high: #ef4444;
+      --risk-critical: #dc2626;
+      --ink-100: #e6ecf5;
+      --ink-300: #a9b6cc;
+      --ink-500: #6b7994;
+      --ink-700: #3d465a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--void-950);
+      color: var(--ink-100);
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59, 130, 246, 0.10), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(34, 211, 238, 0.06), transparent);
+      background-attachment: fixed;
+      overflow-x: hidden;
+    }
+
+    ::selection {
+      background: rgba(34, 211, 238, 0.3);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--signal-500);
+      outline-offset: 2px;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--ink-500);
+    }
+
+    .glass {
+      background: rgba(15, 20, 32, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+    }
+
+    /* ---------------- SPLASH SCREEN ---------------- */
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--void-950);
+      overflow: hidden;
+      transition: opacity .6s ease, visibility .6s ease;
+    }
+
+    #splash::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: .4;
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+
+    #splash.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .radar-wrap {
+      position: relative;
+      width: 260px;
+      height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .radar-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(34, 211, 238, 0.28);
+      animation: ringPulse 3s ease-in-out infinite;
+    }
+
+    .radar-ring.r1 {
+      width: 140px;
+      height: 140px;
+      animation-delay: 0s;
+    }
+
+    .radar-ring.r2 {
+      width: 200px;
+      height: 200px;
+      animation-delay: .4s;
+    }
+
+    .radar-ring.r3 {
+      width: 260px;
+      height: 260px;
+      animation-delay: .8s;
+    }
+
+    @keyframes ringPulse {
+      0% {
+        transform: scale(1);
+        opacity: .5;
+      }
+
+      50% {
+        transform: scale(1.06);
+        opacity: .15;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: .5;
+      }
+    }
+
+    .radar-sweep {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, rgba(34, 211, 238, 0.35), transparent 30%);
+      animation: sweepSpin 2.4s linear infinite;
+    }
+
+    @keyframes sweepSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .radar-core {
+      position: relative;
+      z-index: 2;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: var(--void-800);
+      border: 1px solid rgba(34, 211, 238, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: coreGlow 2s ease-in-out infinite;
+    }
+
+    @keyframes coreGlow {
+
+      0%,
+      100% {
+        box-shadow: 0 0 20px rgba(34, 211, 238, .25);
+      }
+
+      50% {
+        box-shadow: 0 0 42px rgba(34, 211, 238, .55);
+      }
+    }
+
+    #splash h1 {
+      margin: 28px 0 0;
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      opacity: 0;
+      animation: fadeUp .5s ease .2s forwards;
+    }
+
+    #splash h1 span {
+      color: var(--signal-500);
+    }
+
+    #splash .sub {
+      margin-top: 4px;
+      opacity: 0;
+      animation: fadeUp .5s ease .4s forwards;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #boot-line {
+      margin-top: 36px;
+      height: 20px;
+      font-size: 12px;
+      color: rgba(95, 212, 255, .85);
+    }
+
+    #boot-bar-track {
+      margin-top: 16px;
+      width: 224px;
+      height: 2px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .06);
+      overflow: hidden;
+    }
+
+    #boot-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--signal-600), var(--signal-400), var(--signal-600));
+      transition: width .4s ease;
+    }
+
+    /* ---------------- APP LAYOUT ---------------- */
+    #app {
+      opacity: 0;
+      padding: 20px;
+      min-height: 100vh;
+      transition: opacity .6s ease;
+    }
+
+    #app.visible {
+      opacity: 1;
+    }
+
+    header.top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    header.top .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header.top .brand .mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--void-800);
+      border: 1px solid rgba(34, 211, 238, .4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px rgba(34, 211, 238, .25);
+    }
+
+    header.top h1 {
+      font-size: 16px;
+      margin: 0;
+      font-weight: 800;
+      letter-spacing: -.01em;
+    }
+
+    header.top h1 span {
+      color: var(--signal-500);
+    }
+
+    header.top .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--ink-500);
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--risk-low);
+      box-shadow: 0 0 8px var(--risk-low);
+      animation: blink 1.6s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: .35;
+      }
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 260px 1fr 380px;
+      gap: 18px;
+      align-items: stretch;
+      height: calc(100vh - 90px);
+    }
+
+    @media (max-width:1100px) {
+      .grid {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+    }
+
+    /* ---------------- FLEET PANEL ---------------- */
+    #fleet-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #fleet-panel .head {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    #fleet-panel .head h2 {
+      margin: 4px 0 0;
+      font-size: 17px;
+    }
+
+    #fleet-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .truck-card {
+      text-align: left;
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, .05);
+      background: rgba(255, 255, 255, .02);
+      padding: 12px 14px;
+      cursor: pointer;
+      color: inherit;
+      font-family: inherit;
+      transition: border-color .2s ease, background .2s ease, transform .2s ease;
+      opacity: 0;
+      transform: translateX(-12px);
+      animation: slideIn .4s ease forwards;
+    }
+
+    .truck-card:hover {
+      border-color: rgba(255, 255, 255, .14);
+      background: rgba(255, 255, 255, .045);
+      transform: translateX(2px);
+    }
+
+    .truck-card.selected {
+      border-color: rgba(34, 211, 238, .4);
+      background: rgba(34, 211, 238, .08);
+      box-shadow: 0 0 20px rgba(34, 211, 238, .25);
+    }
+
+    @keyframes slideIn {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .truck-card .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .truck-card .id {
+      font-weight: 700;
+      font-size: 13.5px;
+    }
+
+    .badge {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid;
+    }
+
+    .badge.ACTIVE {
+      color: var(--signal-400);
+      border-color: rgba(34, 211, 238, .3);
+      background: rgba(34, 211, 238, .12);
+    }
+
+    .badge.IDLE {
+      color: var(--ink-500);
+      border-color: var(--ink-700);
+      background: rgba(61, 70, 90, .3);
+    }
+
+    .badge.WARNING {
+      color: var(--risk-high);
+      border-color: rgba(239, 68, 68, .4);
+      background: rgba(239, 68, 68, .12);
+    }
+
+    .truck-card .meta {
+      margin-top: 8px;
+      font-size: 11.5px;
+      color: var(--ink-500);
+    }
+
+    /* ---------------- TELEMETRY PANEL ---------------- */
+    #telemetry-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #telemetry-panel .head {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #telemetry-panel .head h2 {
+      margin: 4px 0 0;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .streaming {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--signal-400);
+    }
+
+    .streaming svg {
+      animation: spin 3s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #telemetry-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 22px;
+    }
+
+    #telemetry-empty {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink-500);
+      font-size: 14px;
+    }
+
+    .gauge-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width:640px) {
+      .gauge-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .gauge-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .gauge-ring-wrap {
+      position: relative;
+      width: 92px;
+      height: 92px;
+      flex-shrink: 0;
+      border-radius: 50%;
+    }
+
+    .gauge-ring-wrap svg {
+      transform: rotate(-90deg);
+    }
+
+    .gauge-ring-wrap .bg-ring {
+      fill: none;
+      stroke: rgba(255, 255, 255, .06);
+      stroke-width: 6;
+    }
+
+    .gauge-ring-wrap .fg-ring {
+      fill: none;
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s ease, stroke .3s ease;
+    }
+
+    .gauge-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gauge-center .val {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .gauge-center .unit {
+      font-size: 9px;
+      color: var(--ink-500);
+      margin-top: 2px;
+    }
+
+    .gauge-info .status-text {
+      margin-top: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .info-card {
+      padding: 16px;
+    }
+
+    .info-card .row1 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink-500);
+    }
+
+    .info-card .title {
+      margin-top: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--ink-100);
+    }
+
+    .info-card .sub {
+      margin-top: 2px;
+      font-size: 11.5px;
+      color: var(--ink-500);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width:640px) {
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    #trigger-btn {
+      position: relative;
+      width: 100%;
+      margin-top: 6px;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-weight: 700;
+      letter-spacing: .02em;
+      font-size: 14.5px;
+      color: var(--void-950);
+      background: linear-gradient(90deg, var(--signal-400), var(--signal-600));
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      overflow: hidden;
+      transition: transform .15s ease, opacity .2s ease;
+    }
+
+    #trigger-btn:hover:not(:disabled) {
+      transform: scale(1.012);
+    }
+
+    #trigger-btn:active:not(:disabled) {
+      transform: scale(.98);
+    }
+
+    #trigger-btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    #trigger-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      background: rgba(34, 211, 238, .4);
+      animation: pulseRing 2.2s cubic-bezier(.4, 0, .6, 1) infinite;
+    }
+
+    #trigger-btn.busy::before {
+      animation: none;
+      display: none;
+    }
+
+    @keyframes pulseRing {
+      0% {
+        transform: scale(.92);
+        opacity: .7;
+      }
+
+      70% {
+        transform: scale(1.4);
+        opacity: 0;
+      }
+
+      100% {
+        transform: scale(1.4);
+        opacity: 0;
+      }
+    }
+
+    #trigger-btn span.label {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #trigger-btn svg.spin {
+      animation: spin 1s linear infinite;
+    }
+
+    #telemetry-footer {
+      padding: 14px 22px 20px;
+    }
+
+    /* ---------------- DEBATE FEED ---------------- */
+    #feed-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #feed-panel .head {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    #feed-panel .head h2 {
+      margin: 4px 0 0;
+      font-size: 16px;
+    }
+
+    #feed-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    #feed-empty {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink-500);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+      gap: 8px;
+    }
+
+    .agent-card {
+      opacity: 0;
+      transform: translateY(10px);
+      animation: cardIn .4s ease forwards;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, .06);
+      background: rgba(255, 255, 255, .02);
+      padding: 12px 14px;
+    }
+
+    @keyframes cardIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .agent-card .agent-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .agent-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .agent-name {
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+
+    .agent-tag {
+      margin-left: auto;
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid;
+    }
+
+    .agent-body {
+      margin-top: 8px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--ink-300);
+      min-height: 1.2em;
+    }
+
+    .agent-body .cursor {
+      display: inline-block;
+      width: 6px;
+      height: 12px;
+      background: var(--signal-400);
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink 0.9s step-end infinite;
+    }
+
+    .agent-evidence {
+      margin-top: 8px;
+      font-size: 10.5px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, .3);
+      border: 1px solid rgba(255, 255, 255, .04);
+      color: var(--ink-500);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height .4s ease, opacity .4s ease, margin-top .4s ease;
+    }
+
+    .agent-evidence.show {
+      max-height: 200px;
+      opacity: 1;
+    }
+
+    /* ---------------- DECISION BANNER ---------------- */
+    #banner-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      background: rgba(2, 4, 9, 0.55);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease;
+      padding-top: 8vh;
+    }
+
+    #banner-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #decision-banner {
+      width: min(640px, 92vw);
+      border-radius: 18px;
+      padding: 28px 30px;
+      text-align: center;
+      position: relative;
+      transform: translateY(-40px) scale(.96);
+      opacity: 0;
+      transition: transform .5s cubic-bezier(.16, 1, .3, 1), opacity .5s ease;
+      border: 1px solid;
+      overflow: hidden;
+    }
+
+    #banner-overlay.show #decision-banner {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    #decision-banner.red {
+      background: rgba(35, 8, 10, .92);
+      border-color: rgba(239, 68, 68, .5);
+      box-shadow: 0 0 60px rgba(239, 68, 68, .35);
+      animation: flashRed 1.8s ease-in-out infinite;
+    }
+
+    #decision-banner.green {
+      background: rgba(6, 28, 16, .92);
+      border-color: rgba(34, 197, 94, .5);
+      box-shadow: 0 0 60px rgba(34, 197, 94, .35);
+      animation: flashGreen 1.8s ease-in-out infinite;
+    }
+
+    @keyframes flashRed {
+
+      0%,
+      100% {
+        box-shadow: 0 0 40px rgba(239, 68, 68, .25);
+      }
+
+      50% {
+        box-shadow: 0 0 80px rgba(239, 68, 68, .55);
+      }
+    }
+
+    @keyframes flashGreen {
+
+      0%,
+      100% {
+        box-shadow: 0 0 40px rgba(34, 197, 94, .25);
+      }
+
+      50% {
+        box-shadow: 0 0 80px rgba(34, 197, 94, .55);
+      }
+    }
+
+    #decision-banner .icon-wrap {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 14px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #decision-banner.red .icon-wrap {
+      background: rgba(239, 68, 68, .15);
+      color: var(--risk-high);
+    }
+
+    #decision-banner.green .icon-wrap {
+      background: rgba(34, 197, 94, .15);
+      color: var(--risk-low);
+    }
+
+    #decision-banner h3 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -.01em;
+    }
+
+    #decision-banner.red h3 {
+      color: #fca5a5;
+    }
+
+    #decision-banner.green h3 {
+      color: #86efac;
+    }
+
+    #decision-banner p.rec {
+      margin: 10px 0 0;
+      font-size: 13.5px;
+      color: var(--ink-300);
+      line-height: 1.5;
+    }
+
+    #decision-banner .reasons {
+      margin-top: 14px;
+      text-align: left;
+      font-size: 11.5px;
+      color: var(--ink-500);
+      background: rgba(0, 0, 0, .25);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+
+    #decision-banner .reasons li {
+      margin: 2px 0;
+    }
+
+    #banner-close {
+      margin-top: 20px;
+      padding: 9px 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .15);
+      background: rgba(255, 255, 255, .05);
+      color: var(--ink-100);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #banner-close:hover {
+      background: rgba(255, 255, 255, .1);
+    }
+
+    .feed-scroll::-webkit-scrollbar,
+    #fleet-list::-webkit-scrollbar,
+    #telemetry-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, .18);
+      border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, .32);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+    }
+
+    /* ---------------- SVG CAR TYRE VIZ ---------------- */
+    .car-tyre-section {
+      padding: 12px 0;
+      margin-bottom: 12px;
+    }
+
+    .car-tyre-section .section-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .car-tyre-section .section-head .eyebrow {
+      margin: 0;
+    }
+
+    .car-viz-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      position: relative;
+    }
+
+    .tyre-col {
+      display: flex;
+      flex-direction: column;
+      gap: 80px;
+      z-index: 2;
+    }
+
+    .tyre-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      min-width: 72px;
+    }
+
+    .tyre-badge .tyre-lbl {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink-500);
+    }
+
+    .tyre-badge .tyre-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 2px solid;
+      min-width: 64px;
+      text-align: center;
+      transition: all .4s ease;
+    }
+
+    .tyre-badge .tyre-unit {
+      font-size: 9px;
+      color: var(--ink-500);
+      margin-top: -1px;
+    }
+
+    .tyre-val.ok {
+      color: #5fd4ff;
+      border-color: rgba(34, 211, 238, .4);
+      background: rgba(34, 211, 238, .08);
+      box-shadow: 0 0 14px rgba(34, 211, 238, .2);
+    }
+
+    .tyre-val.warn {
+      color: #f59e0b;
+      border-color: rgba(245, 158, 11, .4);
+      background: rgba(245, 158, 11, .08);
+      box-shadow: 0 0 14px rgba(245, 158, 11, .25);
+    }
+
+    .tyre-val.danger {
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, .5);
+      background: rgba(239, 68, 68, .1);
+      box-shadow: 0 0 18px rgba(239, 68, 68, .35);
+      animation: tyrePulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes tyrePulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 12px rgba(239, 68, 68, .25);
+      }
+
+      50% {
+        box-shadow: 0 0 28px rgba(239, 68, 68, .55);
+      }
+    }
+
+    .car-svg-wrap {
+      flex-shrink: 0;
+      position: relative;
+      margin: 0 -6px;
+    }
+
+    .connector-line {
+      position: absolute;
+      z-index: 1;
+      background: linear-gradient(90deg, rgba(34, 211, 238, .3), rgba(34, 211, 238, .08));
+      height: 1px;
+    }
+
+    .connector-line.left {
+      right: 50%;
+      width: 50px;
+    }
+
+    .connector-line.right {
+      left: 50%;
+      width: 50px;
+    }
+
+
+    /* ================= VISUAL TELEMETRY WIDGETS (SUBTLE & ELEGANT) ================= */
+    #telemetry-body {
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .telemetry-cockpit-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 0;
+    }
+
+    @media (max-width: 900px) {
+      .telemetry-cockpit-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .widget-card {
+      background: rgba(11, 15, 26, 0.6);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 12px 14px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color .25s ease, background .25s ease;
+    }
+
+    .widget-card:hover {
+      border-color: rgba(34, 211, 238, 0.2);
+      background: rgba(15, 20, 32, 0.8);
+    }
+
+    .widget-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .widget-head .eyebrow {
+      margin: 0;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--ink-500);
+    }
+
+    .widget-status-badge {
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    /* THERMOMETER */
+    .thermo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .thermo-graphic {
+      position: relative;
+      width: 26px;
+      height: 48px;
+      flex-shrink: 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .thermo-tube-bg {
+      width: 8px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px 6px 0 0;
+      position: absolute;
+      top: 0;
+      overflow: hidden;
+    }
+
+    .thermo-mercury {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      border-radius: 6px 6px 0 0;
+      transition: height .5s ease, background .3s ease;
+    }
+
+    .thermo-bulb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 0;
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      transition: background .3s ease, box-shadow .3s ease;
+    }
+
+    .thermo-readout {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .thermo-readout .temp-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .thermo-readout .temp-unit {
+      font-size: 12px;
+      color: var(--ink-500);
+      margin-left: 2px;
+    }
+
+    .thermo-readout .temp-sub {
+      font-size: 9.5px;
+      color: var(--ink-500);
+      margin-top: 3px;
+    }
+
+    .heat-waves {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 100%, rgba(239, 68, 68, 0.2), transparent 70%);
+      animation: heatPulse 1.5s ease-in-out infinite alternate;
+    }
+
+    /* SPEEDOMETER */
+    .speedo-wrap {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 52px;
+    }
+
+    .speedo-svg {
+      overflow: visible;
+    }
+
+    /* FUEL TANK */
+    .fuel-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .fuel-gauge-bar {
+      width: 28px;
+      height: 46px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .fuel-fill {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      background: linear-gradient(0deg, var(--signal-600), var(--signal-400));
+      transition: height .5s ease;
+      border-radius: 0 0 4px 4px;
+    }
+
+    .fuel-fill.low {
+      background: linear-gradient(0deg, #dc2626, #ef4444);
+      animation: fuelBlink 1s ease-in-out infinite alternate;
+    }
+
+    .fuel-readout .fuel-pct {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    /* LOWER SUB-GRID */
+    .telemetry-subgrid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 900px) {
+      .telemetry-subgrid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ELEGANT CAR TYRE SECTION */
+    .car-tyre-section {
+      padding: 12px 14px;
+      margin: 0;
+      background: rgba(11, 15, 26, 0.6);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .car-tyre-section .section-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .car-tyre-section .section-head .eyebrow {
+      margin: 0;
+      font-size: 10px;
+      color: var(--ink-500);
+    }
+
+    .car-viz-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      position: relative;
+      padding: 4px 0;
+    }
+
+    .tyre-col {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      z-index: 2;
+    }
+
+    .tyre-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-width: 60px;
+    }
+
+    .tyre-badge .tyre-lbl {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--ink-500);
+    }
+
+    .tyre-badge .tyre-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1.5px solid;
+      min-width: 56px;
+      text-align: center;
+      transition: all .3s ease;
+    }
+
+    .tyre-badge .tyre-unit {
+      font-size: 8.5px;
+      color: var(--ink-500);
+    }
+
+    .car-svg-wrap {
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .car-svg-wrap svg {
+      width: 110px;
+      height: 135px;
+    }
+
+    /* RIGHT COLUMN LOGISTICS STACK */
+    .subgrid-right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .cargo-widget-card {
+      background: rgba(11, 15, 26, 0.6);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0;
+    }
+
+    .cargo-box-graphic {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(34, 211, 238, 0.06);
+      border: 1px solid rgba(34, 211, 238, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+    }
+
+    .cargo-details {
+      flex: 1;
+    }
+
+    .cargo-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-100);
+      margin: 1px 0 2px;
+    }
+
+    .route-widget-card {
+      background: rgba(11, 15, 26, 0.6);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 10px 14px;
+      margin: 0;
+    }
+
+    .route-path-graphic {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      margin: 8px 0 6px;
+    }
+
+    .route-line-track {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 1;
+    }
+
+    .route-line-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--signal-500), var(--signal-400));
+      border-radius: 999px;
+      box-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
+      width: 65%;
+    }
+
+    .route-node {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--void-800);
+      border: 1.5px solid var(--signal-500);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      font-size: 9.5px;
+    }
+
+    .route-truck-pin {
+      position: absolute;
+      left: 65%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+      width: 18px;
+      height: 18px;
+      background: var(--signal-500);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.8);
+    }
+
+    /* --- BREATHTAKING ADD VEHICLE MODAL & TAB STYLES --- */
+    .add-vehicle-btn {
+      font-family: inherit;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 4px 11px;
+      border-radius: 8px;
+      border: 1px solid rgba(34, 211, 238, 0.4);
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(59, 130, 246, 0.12));
+      color: var(--signal-400);
+      cursor: pointer;
+      transition: all .25s ease;
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.2);
+    }
+
+    .add-vehicle-btn:hover {
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.35), rgba(59, 130, 246, 0.25));
+      box-shadow: 0 0 18px rgba(34, 211, 238, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .fleet-tab-bar {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .fleet-tab {
+      flex: 1;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 5px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--ink-500);
+      cursor: pointer;
+      text-align: center;
+      transition: all .2s ease;
+    }
+
+    .fleet-tab.active {
+      color: var(--signal-400);
+      border-color: rgba(34, 211, 238, 0.4);
+      background: rgba(34, 211, 238, 0.12);
+      box-shadow: 0 0 10px rgba(34, 211, 238, 0.15);
+    }
+
+    /* MODAL OVERLAY & CONTAINER (COMPACT & SLEEK) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 150;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4, 7, 15, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: min(520px, 92vw);
+      max-height: 85vh;
+      overflow-y: auto;
+      border-radius: 16px;
+      padding: 16px 20px;
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      background: linear-gradient(160deg, rgba(15, 21, 36, 0.97) 0%, rgba(8, 12, 22, 0.99) 100%);
+      box-shadow: 0 15px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(34, 211, 238, 0.2);
+      transform: translateY(-20px) scale(0.96);
+      transition: transform .3s ease;
+    }
+
+    .modal-overlay.show .modal-card {
+      transform: translateY(0) scale(1);
+    }
+
+    /* MODAL HEADER */
+    .modal-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .modal-head-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 8.5px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--signal-400);
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: rgba(34, 211, 238, 0.12);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      margin-bottom: 2px;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--ink-100);
+    }
+
+    .modal-sub {
+      margin: 1px 0 0;
+      font-size: 10.5px;
+      color: var(--ink-500);
+    }
+
+    .modal-close {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--ink-300);
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* PRESET CARDS GRID (COMPACT) */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .preset-card-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 5px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .preset-card-btn .p-icon {
+      font-size: 14px;
+    }
+
+    .preset-card-btn .p-title {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--ink-100);
+    }
+
+    .preset-card-btn .p-sub {
+      font-size: 8px;
+      color: var(--ink-500);
+    }
+
+    /* FORM SECTION HEADERS (COMPACT) */
+    .form-section-title {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--signal-400);
+      margin: 6px 0 3px;
+    }
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-row {
+      display: grid;
+      gap: 6px;
+    }
+
+    .form-row.2col {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .form-row.3col {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .form-row.4col {
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+
+    .modal-form .field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .modal-form label {
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--ink-300);
+    }
+
+    .modal-form input,
+    .modal-form select {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.45);
+      color: var(--ink-100);
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-cancel {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 11.5px;
+    }
+
+    .btn-submit {
+      padding: 7px 18px;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+
+    /* --- MINIMALIST PROFESSIONAL AGENT ACTIVITY & 3D WIREFRAME ORB LOADER --- */
+    .minimal-loader-card {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      min-height: 520px;
+      background: #050811;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 16px;
+      box-sizing: border-box;
+      gap: 16px;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9), 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    /* TOP 3D STAGE */
+    .minimal-3d-stage {
+      width: 100%;
+      height: 200px;
+      position: relative;
+      background: #03050d;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .minimal-3d-stage canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+
+    /* HUD CORNER BRACKETS */
+    .hud-corner {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border: 1.5px solid rgba(56, 189, 248, 0.4);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .hud-corner.tl {
+      top: 8px;
+      left: 8px;
+      border-right: none;
+      border-bottom: none;
+    }
+
+    .hud-corner.tr {
+      top: 8px;
+      right: 8px;
+      border-left: none;
+      border-bottom: none;
+    }
+
+    .hud-corner.bl {
+      bottom: 8px;
+      left: 8px;
+      border-right: none;
+      border-top: none;
+    }
+
+    .hud-corner.br {
+      bottom: 8px;
+      right: 8px;
+      border-left: none;
+      border-top: none;
+    }
+
+    /* MIDDLE AGENT ACTIVITY LOG PANEL */
+    .agent-activity-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 12px 14px;
+      flex-grow: 1;
+    }
+
+    .activity-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .activity-head .title {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+
+    .activity-head .live-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      color: #22c55e;
+    }
+
+    .activity-head .green-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+      animation: liveDotPulse 1.2s infinite alternate;
+    }
+
+    @keyframes liveDotPulse {
+      0% {
+        opacity: 0.4;
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1.2);
+      }
+    }
+
+    /* LOG LIST */
+    .activity-log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      max-height: 190px;
+      overflow-y: auto;
+    }
+
+    .log-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #64748b;
+      transition: all .25s ease;
+    }
+
+    .log-item-row.active {
+      color: #cbd5e1;
+    }
+
+    .log-item-row.done {
+      color: #94a3b8;
+    }
+
+    .log-item-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .log-item-row .time {
+      color: #475569;
+      font-size: 10px;
+    }
+
+    .log-item-row .bullet {
+      color: #334155;
+    }
+
+    .log-item-row.active .bullet {
+      color: #38bdf8;
+    }
+
+    .log-item-row .text {
+      font-size: 11px;
+    }
+
+    .log-item-row.active .text {
+      color: #f1f5f9;
+    }
+
+    .log-item-status {
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .log-item-status.pending {
+      color: #334155;
+    }
+
+    .log-item-status.active {
+      color: #38bdf8;
+      animation: spinRing 2s linear infinite;
+      display: inline-block;
+    }
+
+    .log-item-status.done {
+      color: #22c55e;
+    }
+
+    /* BOTTOM PROGRESS FOOTER */
+    .progress-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .progress-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      color: #94a3b8;
+      text-transform: uppercase;
+    }
+
+    .progress-head .percent {
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+    }
+
+    .progress-bar-track {
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: #38bdf8;
+      border-radius: 2px;
+      box-shadow: 0 0 10px #38bdf8;
+      transition: width .3s ease;
+    }
+
+    .progress-subtext {
+      font-size: 10.5px;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* PURE INFORMATIONAL TECH TAGS & DISTINCT RIGHT ACTION BUTTON */
+    .tech-badge-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 12px;
+    }
+
+    @media (max-width: 960px) {
+      .tech-badge-group {
+        display: none;
+      }
+    }
+
+    .pure-tech-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #64748b;
+      pointer-events: none;
+      cursor: default;
+      box-shadow: none !important;
+    }
+
+    .pure-tech-tag .green-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+
+    .pure-tech-tag .cyan-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #38bdf8;
+    }
+
+    .pure-tech-tag .purple-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #a855f7;
+    }
+
+    /* RIGHT HEADER ACTIONS */
+    .header-right-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .sys-arch-cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Inter', sans-serif;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(168, 85, 247, 0.25) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      color: #ffffff;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+
+    .sys-arch-cta-btn:hover {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.45) 0%, rgba(168, 85, 247, 0.45) 100%);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.45);
+      transform: translateY(-1px);
+    }
+
+    /* SYSTEM ARCHITECTURE MODAL CONTENT */
+    .arch-modal-card {
+      width: min(720px, 94vw) !important;
+    }
+
+    .arch-dag-container {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(34, 211, 238, 0.2);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .dag-title {
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--signal-400);
+      margin-bottom: 10px;
+    }
+
+    .dag-nodes-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    @media (max-width: 600px) {
+      .dag-nodes-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .dag-node-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .dag-node-card .n-head {
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .dag-node-card.safety .n-head {
+      color: #22d3ee;
+    }
+
+    .dag-node-card.maint .n-head {
+      color: #5fd4ff;
+    }
+
+    .dag-node-card.ops .n-head {
+      color: #a78bfa;
+    }
+
+    .dag-node-card.critic .n-head {
+      color: #f59e0b;
+    }
+
+    .dag-node-card.adv .n-head {
+      color: #ef4444;
+    }
+
+    .dag-node-card.decision .n-head {
+      color: #22c55e;
+    }
+
+    .dag-node-card .n-body {
+      font-size: 9.5px;
+      color: var(--ink-300);
+      line-height: 1.35;
+    }
+
+    .arch-value-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 600px) {
+      .arch-value-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .arch-v-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .arch-v-card .v-icon {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .arch-v-card .v-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ink-100);
+      margin-bottom: 2px;
+    }
+
+    .arch-v-card .v-sub {
+      font-size: 9.5px;
+      color: var(--ink-500);
+      line-height: 1.35;
+    }
+
+
+    #arch-modal-overlay.show {
+      display: flex !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
+
+    #arch-modal-overlay.show {
+      display: flex !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    /* SYSTEM ARCHITECTURE MODAL LISTENERS */
+    document.getElementById('open-arch-modal-btn').addEventListener('click', () => {
+      document.getElementById('arch-modal-overlay').classList.add('show');
+    });
+    document.getElementById('arch-modal-close').addEventListener('click', () => {
+      document.getElementById('arch-modal-overlay').classList.remove('show');
+    });
+    document.getElementById('arch-modal-overlay').addEventListener('click', (e) => {
+      if (e.target.id === 'arch-modal-overlay') {
+        document.getElementById('arch-modal-overlay').classList.remove('show');
+      }
+    });
+
+
+    /* GLOBAL SYSTEM ARCHITECTURE MODAL FUNCTIONS */
+    function openArchModal() {
+      const overlay = document.getElementById('arch-modal-overlay');
+      if (overlay) overlay.classList.add('show');
+    }
+
+    function closeArchModal() {
+      const overlay = document.getElementById('arch-modal-overlay');
+      if (overlay) overlay.classList.remove('show');
+    }
+
+    document.addEventListener('click', (e) => {
+      const overlay = document.getElementById('arch-modal-overlay');
+      if (overlay && e.target === overlay) {
+        overlay.classList.remove('show');
+      }
+    });
+
+
+    /* WINDOW MODAL TRIGGERS */
+    window.openArchModal = function () {
+      const overlay = document.getElementById('arch-modal-overlay');
+      if (overlay) overlay.classList.add('show');
+    };
+
+    window.closeArchModal = function () {
+      const overlay = document.getElementById('arch-modal-overlay');
+      if (overlay) overlay.classList.remove('show');
+    };
+
+
+    /* GUARANTEED SYSTEM ARCHITECTURE MODAL FUNCTIONS */
+    function openArchModal() {
+      console.log("Opening System Architecture Modal...");
+      const overlay = document.getElementById('arch-modal-overlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.classList.add('show');
+      } else {
+        console.error("arch-modal-overlay element not found!");
+      }
+    }
+
+    function closeArchModal() {
+      const overlay = document.getElementById('arch-modal-overlay');
+      if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(() => { overlay.style.display = 'none'; }, 200);
+      }
+    }
+
+    window.openArchModal = openArchModal;
+    window.closeArchModal = closeArchModal;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('header-arch-btn');
+      if (btn) {
+        btn.addEventListener('click', openArchModal);
+      }
+      const closeBtn = document.getElementById('arch-modal-close');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', closeArchModal);
+      }
+    });
+
+
+    
+
+    /* ---------------- HUMAN DECISION BANNER EVALUATOR ---------------- */
+    function evaluateBanner(data) {
+      console.log("evaluateBanner called at END of debate feed typewriter animation:", data);
+      const overlay = document.getElementById('banner-overlay');
+      const iconEl = document.getElementById('banner-icon');
+      const titleEl = document.getElementById('banner-title');
+      const recEl = document.getElementById('banner-rec');
+      const reasonsEl = document.getElementById('banner-reasons');
+
+      if (!overlay || !data || !data.decision) return;
+
+      const dec = data.decision;
+      const approved = dec.approved;
+      const violations = dec.policy_violations || [];
+      const blockReasons = dec.block_reasons || [];
+      const isBlocked = !approved || violations.length > 0 || blockReasons.length > 0 || dec.human_approval_required;
+
+      if (isBlocked) {
+        overlay.style.display = 'flex';
+        overlay.classList.add('show');
+        if (iconEl) iconEl.innerHTML = '🚨';
+        if (titleEl) { 
+          titleEl.textContent = 'HUMAN APPROVAL REQUIRED: SAFETY HAZARD DETECTED'; 
+          titleEl.style.color = '#ef4444'; 
+        }
+        if (recEl) recEl.textContent = dec.recommendation || 'Vehicle departure paused until safety hazards and policy violations are resolved.';
+
+        if (reasonsEl) {
+          reasonsEl.style.display = 'block';
+          
+          let agentReasonsHTML = '';
+          
+          // 1. Safety Agent Specific Callout
+          if (data.safety) {
+            const s = data.safety;
+            if (s.finding === 'CRITICAL' || s.finding === 'HIGH' || s.approved === false || s.comments || s.reasoning) {
+              const reasonText = s.comments || s.reasoning || (Array.isArray(s.findings) ? s.findings.join(' ') : 'Telemetry risk threshold exceeded');
+              agentReasonsHTML += `
+                <div style="margin-bottom:8px; font-size:12px; line-height:1.4; color:#e6ecf5; background:rgba(239,68,68,0.12); padding:8px 10px; border-radius:8px; border-left:3px solid #22d3ee; text-align:left;">
+                  <span style="font-weight:700; color:#22d3ee;">🛡️ Safety Agent:</span> ${reasonText}
+                </div>`;
+            }
+          }
+
+          // 2. Maintenance Agent Specific Callout
+          if (data.maintenance) {
+            const m = data.maintenance;
+            if (m.finding === 'CRITICAL' || m.finding === 'HIGH' || m.approved === false || m.comments || m.reasoning) {
+              const reasonText = m.comments || m.reasoning || (Array.isArray(m.findings) ? m.findings.join(' ') : 'Mechanical/Tyre pressure alert detected');
+              agentReasonsHTML += `
+                <div style="margin-bottom:8px; font-size:12px; line-height:1.4; color:#e6ecf5; background:rgba(239,68,68,0.12); padding:8px 10px; border-radius:8px; border-left:3px solid #5fd4ff; text-align:left;">
+                  <span style="font-weight:700; color:#5fd4ff;">🔧 Maintenance Agent:</span> ${reasonText}
+                </div>`;
+            }
+          }
+
+          // 3. Adversarial Agent Specific Callout
+          if (data.adversarial && data.adversarial.challenge_successful) {
+            agentReasonsHTML += `
+              <div style="margin-bottom:8px; font-size:12px; line-height:1.4; color:#e6ecf5; background:rgba(239,68,68,0.12); padding:8px 10px; border-radius:8px; border-left:3px solid #ef4444; text-align:left;">
+                <span style="font-weight:700; color:#ef4444;">🔺 Adversarial Red Team:</span> ${data.adversarial.flaw_description || 'Challenge raised: Severe risk identified under red team audit.'}
+              </div>`;
+          }
+
+          // 4. Deterministic Policy Engine Violations
+          const allViolations = [...new Set([...violations, ...blockReasons])];
+          if (allViolations.length > 0) {
+            allViolations.forEach(v => {
+              agentReasonsHTML += `
+                <div style="margin-bottom:8px; font-size:12px; line-height:1.4; color:#e6ecf5; background:rgba(245,158,11,0.12); padding:8px 10px; border-radius:8px; border-left:3px solid #f59e0b; text-align:left;">
+                  <span style="font-weight:700; color:#f59e0b;">🚨 Deterministic Policy Engine:</span> ${v}
+                </div>`;
+            });
+          }
+
+          reasonsEl.innerHTML = `
+            <div style="font-size:10.5px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:#fca5a5; margin-bottom:10px; text-align:left;">
+              SPECIFIC REASONS FOR HUMAN OPERATOR OVERRIDE:
+            </div>
+            ${agentReasonsHTML || '<div style="font-size:12px; color:#cbd5e1; text-align:left;">Mandatory safety policy override triggered by multi-agent consensus.</div>'}
+          `;
+        }
+      } else {
+        overlay.style.display = 'flex';
+        overlay.classList.add('show');
+        if (iconEl) iconEl.innerHTML = '✅';
+        if (titleEl) { 
+          titleEl.textContent = 'MULTI-AGENT CONSENSUS: CLEAR TO PROCEED'; 
+          titleEl.style.color = '#22c55e'; 
+        }
+        if (recEl) recEl.textContent = dec.recommendation || 'All safety, telemetry, and shift checks passed. Vehicle cleared for dispatch.';
+        if (reasonsEl) reasonsEl.style.display = 'none';
+      }
+    }
+
+    function hideBanner(force) {
+      const overlay = document.getElementById('banner-overlay');
+      if (overlay) {
+        overlay.classList.remove('show');
+        overlay.style.display = 'none';
+      }
+    }
+
+    window.renderDebateFeed = renderDebateFeed;
+    window.evaluateBanner = evaluateBanner;
+    window.hideBanner = hideBanner;
+
+    document.getElementById('banner-close')?.addEventListener('click', () => hideBanner(true));
+
+  </script>
+</head>
+
+<body>
+
+  <!-- ============ SPLASH SCREEN ============ -->
+  <div id="splash">
+    <div class="radar-wrap">
+      <div class="radar-ring r1"></div>
+      <div class="radar-ring r2"></div>
+      <div class="radar-ring r3"></div>
+      <div class="radar-sweep"></div>
+      <div class="radar-core">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L4 5.5V11c0 5 3.4 8.9 8 10 4.6-1.1 8-5 8-10V5.5L12 2Z" stroke="#5fd4ff" stroke-width="1.5"
+            stroke-linejoin="round" />
+          <circle cx="12" cy="11" r="2.5" stroke="#5fd4ff" stroke-width="1.5" />
+        </svg>
+      </div>
+    </div>
+    <h1>OPS <span>SENTINEL</span></h1>
+    <p class="sub eyebrow">Multi-Agent Fleet Risk Command</p>
+    <div id="boot-line" class="mono"></div>
+    <div id="boot-bar-track">
+      <div id="boot-bar"></div>
+    </div>
+  </div>
+
+  <!-- ============ MAIN APP ============ -->
+  <div id="app">
+    <header class="top">
+      <div class="brand">
+        <div class="mark">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L4 5.5V11c0 5 3.4 8.9 8 10 4.6-1.1 8-5 8-10V5.5L12 2Z" stroke="#5fd4ff" stroke-width="1.6" />
+          </svg>
+        </div>
+        <h1>OPS <span>SENTINEL</span></h1>
+
+        <!-- PURE INFORMATIONAL STATIC TAGS -->
+        <div class="tech-badge-group">
+          <span class="pure-tech-tag"><span class="green-dot"></span> LangGraph 6-Node Mesh</span>
+          <span class="pure-tech-tag"><span class="cyan-dot"></span> Groq Llama-3 70B</span>
+          <span class="pure-tech-tag"><span class="purple-dot"></span> Three.js WebGL 3D</span>
+        </div>
+      </div>
+
+      <!-- RIGHT ACTION AREA -->
+      <div class="header-right-actions">
+        <button type="button" class="sys-arch-cta-btn" id="header-arch-btn" onclick="openArchModal()">🧠 System
+          Architecture</button>
+        <div class="status"><span class="dot"></span> Backend: <span id="backend-status" class="mono">checking…</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- FLEET PANEL -->
+      <aside id="fleet-panel" class="glass">
+        <div class="head">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <p class="eyebrow">Fleet Command</p>
+            <button id="open-add-modal-btn" class="add-vehicle-btn">+ Add Truck</button>
+          </div>
+          <h2 id="fleet-count">0 vehicles tracked</h2>
+          <div class="fleet-tab-bar">
+            <button class="fleet-tab active" id="tab-all" onclick="setFleetTab('all')">ALL (0)</button>
+            <button class="fleet-tab" id="tab-judge" onclick="setFleetTab('judge')">JUDGE FLEET ⚖️</button>
+          </div>
+        </div>
+        <div id="fleet-list"></div>
+      </aside>
+
+      <!-- TELEMETRY PANEL -->
+      <section id="telemetry-panel" class="glass">
+        <div class="head">
+          <div>
+            <p class="eyebrow">Live Telemetry</p>
+            <h2 id="telemetry-title" class="mono">—</h2>
+          </div>
+          <div class="streaming">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4M4.9 19.1l2.9-2.9M16.2 7.8l2.9-2.9" />
+            </svg>
+            STREAMING
+          </div>
+        </div>
+        <div id="telemetry-body">
+          <div id="telemetry-empty">Select a vehicle to view live telemetry.</div>
+        </div>
+        <div id="telemetry-footer" style="display:none;">
+          <button id="trigger-btn">
+            <span class="label">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
+              </svg>
+              <span id="trigger-label">Trigger Investigation</span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <!-- AGENT DEBATE FEED -->
+      <aside id="feed-panel" class="glass">
+        <div class="head">
+          <p class="eyebrow">Agent Debate Feed</p>
+          <h2>Society of Minds</h2>
+        </div>
+        <div id="feed-body">
+          <div id="feed-empty">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3d465a" stroke-width="1.5">
+              <path
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.4-4 8-9 8-1.1 0-2.2-.15-3.2-.44L3 21l1.5-4.2C3.55 15.4 3 13.75 3 12c0-4.4 4-8 9-8s9 3.6 9 8Z" />
+            </svg>
+            Trigger an investigation to watch the agents debate in real time.
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ============ DECISION BANNER ============ -->
+  <div id="banner-overlay">
+    <div id="decision-banner" class="glass">
+      <div class="icon-wrap" id="banner-icon"></div>
+      <h3 id="banner-title">—</h3>
+      <p class="rec" id="banner-rec"></p>
+      <ul class="reasons" id="banner-reasons" style="display:none;"></ul>
+      <button id="banner-close">Acknowledge</button>
+    </div>
+  </div>
+
+  <script>
+    
+
+    /* ---------------- HUMAN DECISION BANNER EVALUATOR ---------------- */
+    function evaluateBanner(data) {
+      console.log("evaluateBanner called at END of debate feed typewriter animation:", data);
+      const overlay = document.getElementById('banner-overlay');
+      const iconEl = document.getElementById('banner-icon');
+      const titleEl = document.getElementById('banner-title');
+      const recEl = document.getElementById('banner-rec');
+      const reasonsEl = document.getElementById('banner-reasons');
+
+      if (!overlay || !data || !data.decision) return;
+
+      const dec = data.decision;
+      const approved = dec.approved;
+      const violations = dec.policy_violations || [];
+      const blockReasons = dec.block_reasons || [];
+      const isBlocked = !approved || violations.length > 0 || blockReasons.length > 0 || dec.human_approval_required;
+
+      if (isBlocked) {
+        overlay.style.display = 'flex';
+        overlay.classList.add('show');
+        if (iconEl) iconEl.innerHTML = '🚨';
+        if (titleEl) { 
+          titleEl.textContent = 'HUMAN APPROVAL REQUIRED: SAFETY HAZARD DETECTED'; 
+          titleEl.style.color = '#ef4444'; 
+        }
+        if (recEl) recEl.textContent = dec.recommendation || 'Vehicle departure paused until safety hazards and policy violations are resolved.';
+
+        if (reasonsEl) {
+          reasonsEl.style.display = 'block';
+          
+          let agentReasonsHTML = '';
+          
+          // 1. Safety Agent Specific Callout
+          if (data.safety) {
+            const s = data.safety;
+            if (s.finding === 'CRITICAL' || s.finding === 'HIGH' || s.approved === false || s.comments || s.reasoning) {
+              const reasonText = s.comments || s.reasoning || (Array.isArray(s.findings) ? s.findings.join(' ') : 'Telemetry risk threshold exceeded');
+              agentReasonsHTML += `
+                <div style="margin-bottom:8px; font-size:12px; line-height:1.4; color:#e6ecf5; background:rgba(239,68,68,0.12); padding:8px 10px; border-radius:8px; border-left:3px solid #22d3ee; text-align:left;">
+                  <span style="font-weight:700; color:#22d3ee;">🛡️ Safety Agent:</span> ${reasonText}
+                </div>`;
+            }
+          }
+
+          // 2. Maintenance Agent Specific Callout
+          if (data.maintenance) {
+            const m = data.maintenance;
+            if (m.finding === 'CRITICAL' || m.finding === 'HIGH' || m.approved === false || m.comments || m.reasoning) {
+              const reasonText = m.comments || m.reasoning || (Array.isArray(m.findings) ? m.findings.join(' ') : 'Mechanical/Tyre pressure alert detected');
+              agentReasonsHTML += `
+                <div style="margin-bottom:8px; font-size:12px; line-height:1.4; color:#e6ecf5; background:rgba(239,68,68,0.12); padding:8px 10px; border-radius:8px; border-left:3px solid #5fd4ff; text-align:left;">
+                  <span style="font-weight:700; color:#5fd4ff;">🔧 Maintenance Agent:</span> ${reasonText}
+                </div>`;
+            }
+          }
+
+          // 3. Adversarial Agent Specific Callout
+          if (data.adversarial && data.adversarial.challenge_successful) {
+            agentReasonsHTML += `
+              <div style="margin-bottom:8px; font-size:12px; line-height:1.4; color:#e6ecf5; background:rgba(239,68,68,0.12); padding:8px 10px; border-radius:8px; border-left:3px solid #ef4444; text-align:left;">
+                <span style="font-weight:700; color:#ef4444;">🔺 Adversarial Red Team:</span> ${data.adversarial.flaw_description || 'Challenge raised: Severe risk identified under red team audit.'}
+              </div>`;
+          }
+
+          // 4. Deterministic Policy Engine Violations
+          const allViolations = [...new Set([...violations, ...blockReasons])];
+          if (allViolations.length > 0) {
+            allViolations.forEach(v => {
+              agentReasonsHTML += `
+                <div style="margin-bottom:8px; font-size:12px; line-height:1.4; color:#e6ecf5; background:rgba(245,158,11,0.12); padding:8px 10px; border-radius:8px; border-left:3px solid #f59e0b; text-align:left;">
+                  <span style="font-weight:700; color:#f59e0b;">🚨 Deterministic Policy Engine:</span> ${v}
+                </div>`;
+            });
+          }
+
+          reasonsEl.innerHTML = `
+            <div style="font-size:10.5px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:#fca5a5; margin-bottom:10px; text-align:left;">
+              SPECIFIC REASONS FOR HUMAN OPERATOR OVERRIDE:
+            </div>
+            ${agentReasonsHTML || '<div style="font-size:12px; color:#cbd5e1; text-align:left;">Mandatory safety policy override triggered by multi-agent consensus.</div>'}
+          `;
+        }
+      } else {
+        overlay.style.display = 'flex';
+        overlay.classList.add('show');
+        if (iconEl) iconEl.innerHTML = '✅';
+        if (titleEl) { 
+          titleEl.textContent = 'MULTI-AGENT CONSENSUS: CLEAR TO PROCEED'; 
+          titleEl.style.color = '#22c55e'; 
+        }
+        if (recEl) recEl.textContent = dec.recommendation || 'All safety, telemetry, and shift checks passed. Vehicle cleared for dispatch.';
+        if (reasonsEl) reasonsEl.style.display = 'none';
+      }
+    }
+
+    function hideBanner(force) {
+      const overlay = document.getElementById('banner-overlay');
+      if (overlay) {
+        overlay.classList.remove('show');
+        overlay.style.display = 'none';
+      }
+    }
+
+    window.renderDebateFeed = renderDebateFeed;
+    window.evaluateBanner = evaluateBanner;
+    window.hideBanner = hideBanner;
+
+    /* GLOBAL SYSTEM ARCHITECTURE MODAL FUNCTIONS */
+    function openArchModal() {
+      console.log("openArchModal called!");
+      const overlay = document.getElementById('arch-modal-overlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.classList.add('show');
+      } else {
+        console.error("arch-modal-overlay element not found in DOM");
+      }
+    }
+
+    function closeArchModal() {
+      const overlay = document.getElementById('arch-modal-overlay');
+      if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(() => { overlay.style.display = 'none'; }, 200);
+      }
+    }
+
+    window.openArchModal = openArchModal;
+    window.closeArchModal = closeArchModal;
+
+    /* =========================================================
+       OPS SENTINEL — single-file dashboard (vanilla JS)
+       Backend: POST http://127.0.0.1:8000/incidents/{vehicle_id}/investigate
+       Falls back to a bundled sample report if the backend is
+       unreachable, so the UI is always demoable.
+    ========================================================= */
+
+    const BASE_URL = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' || window.location.protocol === 'file:')
+      ? "http://127.0.0.1:8000"
+      : window.location.origin;
+
+    let FLEET = [];
+
+    // Fetch all trucks dynamically from the backend API
+    async function loadFleet() {
+      try {
+        const res = await fetch(BASE_URL + '/vehicles');
+        if (res.ok) {
+          const vehicles = await res.json();
+          FLEET = vehicles.map(v => {
+            // Determine status badge based on scenario/telemetry
+            let status = 'ACTIVE';
+            if (v.engine_temperature > 100) status = 'WARNING';
+            if (v.engine_temperature > 110) status = 'CRITICAL';
+            if (v.scenario === 'TYRE_PRESSURE_DROP') status = 'WARNING';
+            if (v.speed < 5) status = 'IDLE';
+
+            return {
+              id: v.vehicle_id,
+              driver: '—',
+              route: '—',
+              status: status,
+              telemetry: {
+                engineTemp: v.engine_temperature.toFixed(1),
+                speed: v.speed.toFixed(1),
+                tyrePressure: v.tyre_pressure.front_left.toFixed(1),
+                tyrePressureFL: v.tyre_pressure.front_left.toFixed(1),
+                tyrePressureFR: v.tyre_pressure.front_right.toFixed(1),
+                tyrePressureRL: v.tyre_pressure.rear_left.toFixed(1),
+                tyrePressureRR: v.tyre_pressure.rear_right.toFixed(1),
+                fuel: v.fuel_level.toFixed(0),
+                cargo: '—',
+                cargoPriority: 'MEDIUM',
+                routeCondition: '—'
+              }
+            };
+          });
+
+          // Now fetch route info for each truck to get cargo/driver
+          for (const truck of FLEET) {
+            try {
+              const rRes = await fetch(BASE_URL + '/vehicles/' + truck.id + '/route');
+              if (rRes.ok) {
+                const route = await rRes.json();
+                truck.telemetry.cargo = route.cargo || '—';
+                truck.telemetry.cargoPriority = route.priority || 'MEDIUM';
+                truck.telemetry.routeCondition = route.route_conditions || '—';
+                truck.route = route.destination ? ('Pune \u2192 ' + route.destination) : '—';
+              }
+            } catch (e) { }
+          }
+
+          renderFleet();
+          if (!selectedId && FLEET.length > 0) {
+            selectTruck(FLEET[0].id);
+          }
+        }
+      } catch (e) {
+        console.log('Backend not available, using empty fleet');
+      }
+    }
+
+    const SAMPLE_REPORT_TEMPLATE = {
+      iteration: 1,
+      safety: { finding: "LOW", confidence: 1.0, evidence: { speed: 61.1, engine_temperature: 90.5, tyre_pressure: { front_left: 32.0 } }, evidence_quality: "CURRENT" },
+      maintenance: { finding: "LOW", confidence: 1.0, evidence: "{'last_service_date': '2026-07-15', 'open_work_orders': 0}", evidence_quality: "CURRENT" },
+      operations: { finding: "HIGH", confidence: 0.95, evidence: "{'destination': 'Mumbai', 'cargo': 'Vaccines', 'priority': 'HIGH'}", evidence_quality: "CURRENT" },
+      critic: { has_conflict: false, requires_more_evidence: false, scope_violation_detected: false, reasoning: "No conflict detected. Evidence is sufficient." },
+      adversarial: { challenge_successful: true, flaw_description: "Engine temperature is 90.5°C—slightly above safe operating limits. I challenge the Safety Agent's LOW risk finding." },
+      decision: { recommendation: "Reassess Safety risk level: consider raising to MEDIUM due to engine temperature concern.", human_approval_required: true, block_reasons: ["Adversarial agent successfully challenged the decision"] }
+    };
+
+    let selectedId = null;
+    let investigating = false;
+
+    /* ---------------- SPLASH SCREEN SEQUENCE ---------------- */
+    const BOOT_LINES = [
+      "Initializing sentinel core…",
+      "Connecting agent mesh: safety · maintenance · operations",
+      "Calibrating policy engine thresholds…",
+      "Fleet uplink established"
+    ];
+    (function runBoot() {
+      const lineEl = document.getElementById('boot-line');
+      const barEl = document.getElementById('boot-bar');
+      let i = 0;
+      function step() {
+        lineEl.textContent = BOOT_LINES[i];
+        barEl.style.width = (((i + 1) / BOOT_LINES.length) * 100) + '%';
+        i++;
+        if (i < BOOT_LINES.length) { setTimeout(step, 480); }
+        else { setTimeout(finish, 650); }
+      }
+      function finish() {
+        document.getElementById('splash').classList.add('hidden');
+        document.getElementById('app').classList.add('visible');
+      }
+      step();
+    })();
+
+    /* ---------------- FLEET PANEL ---------------- */
+
+    let currentTab = 'all';
+    let CUSTOM_VEHICLES = new Set();
+
+    function setFleetTab(tab) {
+      currentTab = tab;
+      document.getElementById('tab-all').classList.toggle('active', tab === 'all');
+      document.getElementById('tab-judge').classList.toggle('active', tab === 'judge');
+      renderFleet();
+    }
+
+    function openAddModal() {
+      document.getElementById('add-modal-overlay').classList.add('show');
+    }
+
+    function closeAddModal() {
+      document.getElementById('add-modal-overlay').classList.remove('show');
+    }
+
+    document.getElementById('open-add-modal-btn').addEventListener('click', openAddModal);
+
+    function applyPreset(preset) {
+      if (preset === 'overheat') {
+        document.getElementById('add-vid').value = 'TRUCK-JUDGE-01';
+        document.getElementById('add-dest').value = 'Bengaluru';
+
+        document.getElementById('add-temp').value = '112.5';
+        document.getElementById('add-speed').value = '62.0';
+        document.getElementById('add-fl').value = '32.0';
+        document.getElementById('add-cargo').value = 'Industrial Equipment';
+        document.getElementById('add-priority').value = 'MEDIUM';
+        document.getElementById('add-cond').value = 'Heavy Rain on NH48';
+      } else if (preset === 'blowout') {
+        document.getElementById('add-vid').value = 'TRUCK-JUDGE-02';
+        document.getElementById('add-dest').value = 'Nashik';
+
+        document.getElementById('add-temp').value = '84.0';
+        document.getElementById('add-speed').value = '75.0';
+        document.getElementById('add-fl').value = '16.0';
+        document.getElementById('add-cargo').value = 'Electronics';
+        document.getElementById('add-priority').value = 'HIGH';
+        document.getElementById('add-cond').value = 'Clear highway';
+      } else if (preset === 'vaccines') {
+        document.getElementById('add-vid').value = 'TRUCK-JUDGE-03';
+        document.getElementById('add-dest').value = 'Delhi';
+
+        document.getElementById('add-temp').value = '86.0';
+        document.getElementById('add-speed').value = '82.0';
+        document.getElementById('add-fl').value = '32.0';
+        document.getElementById('add-cargo').value = 'Vaccines (Expires in 2 hours)';
+        document.getElementById('add-priority').value = 'HIGH';
+        document.getElementById('add-cond').value = 'Massive Traffic Jam';
+      } else if (preset === 'safe') {
+        document.getElementById('add-vid').value = 'TRUCK-JUDGE-04';
+        document.getElementById('add-dest').value = 'Chennai';
+
+        document.getElementById('add-temp').value = '82.0';
+        document.getElementById('add-speed').value = '70.0';
+        document.getElementById('add-fl').value = '32.0';
+        document.getElementById('add-cargo').value = 'Textiles';
+        document.getElementById('add-priority').value = 'LOW';
+        document.getElementById('add-cond').value = 'Clear highway';
+      }
+    }
+
+    async function submitCustomTruck(e) {
+      e.preventDefault();
+      const vid = document.getElementById('add-vid').value.trim();
+      const payload = {
+        vehicle_id: vid,
+        driver: document.getElementById('add-driver').value,
+        destination: document.getElementById('add-dest').value,
+        cargo: document.getElementById('add-cargo').value,
+        priority: document.getElementById('add-priority').value,
+        route_conditions: document.getElementById('add-cond').value,
+        engine_temperature: parseFloat(document.getElementById('add-temp').value),
+        speed: parseFloat(document.getElementById('add-speed').value),
+        fuel_level: parseFloat(document.getElementById('add-fuel').value),
+        tyre_pressure_fl: parseFloat(document.getElementById('add-fl').value),
+        tyre_pressure_fr: parseFloat(document.getElementById('add-fr').value),
+        tyre_pressure_rl: parseFloat(document.getElementById('add-rl').value),
+        tyre_pressure_rr: parseFloat(document.getElementById('add-rr').value),
+        driver_status: document.getElementById('add-driver-status').value,
+        open_work_orders: parseInt(document.getElementById('add-work-orders').value || '0'),
+        last_service_date: document.getElementById('add-service-date').value,
+        judge_notes: document.getElementById('add-notes').value,
+        scenario: 'NORMAL'
+      };
+
+      try {
+        const res = await fetch(BASE_URL + '/vehicles/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          CUSTOM_VEHICLES.add(data.vehicle_id);
+          closeAddModal();
+          await loadFleet();
+          setFleetTab('judge');
+          selectTruck(data.vehicle_id);
+        }
+      } catch (err) {
+        console.log('Error adding vehicle:', err);
+      }
+    }
+
+
+    function renderFleet() {
+      const list = document.getElementById('fleet-list');
+      document.getElementById('fleet-count').textContent = FLEET.length + ' vehicles tracked';
+      list.innerHTML = '';
+      FLEET.forEach((truck, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'truck-card' + (truck.id === selectedId ? ' selected' : '');
+        btn.style.animationDelay = (idx * 0.06) + 's';
+        btn.innerHTML = `
+      <div class="row">
+        <div class="id mono">${truck.id}</div>
+        <span class="badge ${truck.status}">${truck.status}</span>
+      </div>
+      <div class="meta">📍 ${truck.route}</div>
+      <div class="meta">Driver: ${truck.driver}</div>
+    `;
+        btn.addEventListener('click', () => selectTruck(truck.id));
+        list.appendChild(btn);
+      });
+    }
+
+    function selectTruck(id) {
+      selectedId = id;
+      renderFleet();
+      renderTelemetry();
+      resetFeed();
+    }
+
+    /* ---------------- TELEMETRY PANEL ---------------- */
+    function gaugePct(value, max) { return Math.max(0, Math.min(1, value / max)); }
+
+    function gaugeCardHTML({ label, value, unit, max, danger }) {
+      const pct = gaugePct(value, max);
+      const isDanger = danger !== undefined && value >= danger;
+      const isWarn = danger !== undefined && value >= danger * 0.9 && value < danger;
+      const ringColor = isDanger ? '#ef4444' : isWarn ? '#f59e0b' : '#22d3ee';
+      const statusText = isDanger ? 'Above threshold' : isWarn ? 'Approaching limit' : 'Nominal';
+      const radius = 38, circumference = 2 * Math.PI * radius, dash = circumference * pct;
+      const glowShadow = isDanger ? '0 0 20px rgba(239,68,68,.4)' : isWarn ? '0 0 20px rgba(245,158,11,.3)' : '0 0 20px rgba(34,211,238,.35)';
+      return `
+    <div class="gauge-card glass">
+      <div class="gauge-ring-wrap" style="box-shadow:${glowShadow};">
+        <svg width="92" height="92" viewBox="0 0 110 110">
+          <circle class="bg-ring" cx="55" cy="55" r="${radius}"></circle>
+          <circle class="fg-ring" cx="55" cy="55" r="${radius}" stroke="${ringColor}"
+            stroke-dasharray="${circumference}" stroke-dashoffset="${circumference - dash}"></circle>
+        </svg>
+        <div class="gauge-center">
+          <div class="val mono">${value}</div>
+          <div class="unit">${unit}</div>
+        </div>
+      </div>
+      <div class="gauge-info">
+        <p class="eyebrow">${label}</p>
+        <p class="status-text" style="color:${ringColor};">${statusText}</p>
+      </div>
+    </div>
+  `;
+    }
+
+    function tyreClass(psi) {
+      const v = parseFloat(psi);
+      if (v < 28) return 'danger';
+      if (v < 30) return 'warn';
+      return 'ok';
+    }
+
+    function getEngineStatus(temp) {
+      const val = parseFloat(temp);
+      if (val >= 105) return { status: 'OVERHEATING 🔥', color: '#ef4444', border: 'rgba(239,68,68,0.5)', bg: 'rgba(239,68,68,0.12)', glow: '0 0 20px rgba(239,68,68,0.4)', isHot: true };
+      if (val >= 95) return { status: 'ELEVATED ⚠️', color: '#f59e0b', border: 'rgba(245,158,11,0.5)', bg: 'rgba(245,158,11,0.12)', glow: '0 0 16px rgba(245,158,11,0.3)', isHot: false };
+      return { status: 'NOMINAL', color: '#22d3ee', border: 'rgba(34,211,238,0.3)', bg: 'rgba(34,211,238,0.12)', glow: '0 0 14px rgba(34,211,238,0.2)', isHot: false };
+    }
+
+    function getSpeedStatus(speed) {
+      const val = parseFloat(speed);
+      if (val < 5) return { text: 'IDLE 🛑', color: '#6b7994', border: 'rgba(107,121,148,0.3)' };
+      if (val > 90) return { text: 'HIGH SPEED ⚡', color: '#ef4444', border: 'rgba(239,68,68,0.4)' };
+      if (val > 50) return { text: 'HIGHWAY 🛣️', color: '#22d3ee', border: 'rgba(34,211,238,0.4)' };
+      return { text: 'CITY 🏙️', color: '#5fd4ff', border: 'rgba(95,212,255,0.4)' };
+    }
+
+    function getCargoIcon(cargo) {
+      const str = (cargo || '').toLowerCase();
+      if (str.includes('vaccine') || str.includes('medical')) return { icon: '💉', label: 'Cold-Chain Sensitive', color: '#22d3ee' };
+      if (str.includes('perishable') || str.includes('food')) return { icon: '🥦', label: 'Refrigerated Cargo', color: '#5fd4ff' };
+      if (str.includes('electronic')) return { icon: '⚡', label: 'High-Tech Fragile', color: '#f59e0b' };
+      if (str.includes('auto') || str.includes('machin') || str.includes('steel')) return { icon: '⚙️', label: 'Heavy Industrial', color: '#a78bfa' };
+      return { icon: '📦', label: 'General Freight', color: '#3b82f6' };
+    }
+
+    async function renderTelemetry() {
+      const body = document.getElementById('telemetry-body');
+      const footer = document.getElementById('telemetry-footer');
+      const title = document.getElementById('telemetry-title');
+
+      const truck = FLEET.find(t => t.id === selectedId);
+      if (!truck) {
+        body.innerHTML = '<div id="telemetry-empty">Select a vehicle to view live telemetry.</div>';
+        footer.style.display = 'none';
+        title.textContent = '—';
+        return;
+      }
+
+      title.textContent = truck.id;
+      footer.style.display = 'block';
+      let t = Object.assign({
+        tyrePressureFL: truck.telemetry.tyrePressure || 32,
+        tyrePressureFR: truck.telemetry.tyrePressure || 32,
+        tyrePressureRL: truck.telemetry.tyrePressure || 32,
+        tyrePressureRR: truck.telemetry.tyrePressure || 32,
+      }, truck.telemetry);
+
+      try {
+        const telRes = await fetch(`${BASE_URL}/vehicles/${selectedId}/telemetry`);
+        const rRes = await fetch(`${BASE_URL}/vehicles/${selectedId}/route`);
+        if (telRes.ok && rRes.ok) {
+          const liveT = await telRes.json();
+          const liveR = await rRes.json();
+          t = {
+            engineTemp: liveT.engine_temperature.toFixed(1),
+            speed: liveT.speed.toFixed(1),
+            tyrePressure: liveT.tyre_pressure.front_left.toFixed(1),
+            tyrePressureFL: liveT.tyre_pressure.front_left.toFixed(1),
+            tyrePressureFR: liveT.tyre_pressure.front_right.toFixed(1),
+            tyrePressureRL: liveT.tyre_pressure.rear_left.toFixed(1),
+            tyrePressureRR: liveT.tyre_pressure.rear_right.toFixed(1),
+            fuel: liveT.fuel_level.toFixed(0),
+            cargo: liveR.cargo,
+            cargoPriority: liveR.priority,
+            routeCondition: liveR.route_conditions
+          };
+        }
+      } catch (e) { }
+
+      const engineInfo = getEngineStatus(t.engineTemp);
+      const speedInfo = getSpeedStatus(t.speed);
+      const cargoMeta = getCargoIcon(t.cargo);
+      const fuelVal = parseFloat(t.fuel);
+      const isLowFuel = fuelVal < 20;
+      const priorityColor = t.cargoPriority === 'HIGH' ? '#ef4444' : t.cargoPriority === 'MEDIUM' ? '#f59e0b' : '#22c55e';
+      const destCity = truck.route ? truck.route.replace('Pune → ', '').trim() : 'Destination';
+
+      // Calculations for SVGs
+      const thermoPct = Math.min(100, Math.max(10, (parseFloat(t.engineTemp) / 130) * 100));
+      const speedAngle = -120 + Math.min(1, Math.max(0, parseFloat(t.speed) / 120)) * 240;
+      const speedPct = Math.min(1, Math.max(0, parseFloat(t.speed) / 120));
+      const speedDash = 175 * speedPct;
+
+      body.innerHTML = `
+    <!-- TELEMETRY COCKPIT GRID (TOP ROW) -->
+    <div class="telemetry-cockpit-grid">
+      
+      <!-- ENGINE TEMPERATURE -->
+      <div class="widget-card">
+        ${engineInfo.isHot ? '<div class="heat-waves"></div>' : ''}
+        <div class="widget-head">
+          <p class="eyebrow">Engine Temp</p>
+          <span class="widget-status-badge" style="color:${engineInfo.color}; border-color:${engineInfo.border}; background:${engineInfo.bg};">${engineInfo.status}</span>
+        </div>
+        <div class="thermo-container">
+          <div class="thermo-graphic">
+            <div class="thermo-tube-bg">
+              <div class="thermo-mercury" style="height:${thermoPct}%; background:${engineInfo.color};"></div>
+            </div>
+            <div class="thermo-bulb" style="background:${engineInfo.color};"></div>
+          </div>
+          <div class="thermo-readout">
+            <div>
+              <span class="temp-val mono" style="color:${engineInfo.color};">${t.engineTemp}</span>
+              <span class="temp-unit">°C</span>
+            </div>
+            <p class="temp-sub">${parseFloat(t.engineTemp) > 100 ? '🔥 Heat Warning' : 'Nominal Thermal Range'}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPEEDOMETER -->
+      <div class="widget-card">
+        <div class="widget-head">
+          <p class="eyebrow">Speed</p>
+          <span class="widget-status-badge" style="color:${speedInfo.color}; border-color:${speedInfo.border}; background:rgba(15,20,32,0.6);">${speedInfo.text}</span>
+        </div>
+        <div class="speedo-wrap">
+          <svg class="speedo-svg" width="120" height="60" viewBox="0 0 120 60">
+            <defs>
+              <linearGradient id="speedGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#22d3ee"/>
+                <stop offset="60%" stop-color="#f59e0b"/>
+                <stop offset="100%" stop-color="#ef4444"/>
+              </linearGradient>
+            </defs>
+            <!-- Track Arc -->
+            <path d="M 16 48 A 40 40 0 1 1 104 48" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6" stroke-linecap="round"/>
+            <!-- Fill Arc -->
+            <path d="M 16 48 A 40 40 0 1 1 104 48" fill="none" stroke="url(#speedGrad)" stroke-width="6" stroke-linecap="round"
+                  stroke-dasharray="175" stroke-dashoffset="${175 - speedDash}"/>
+            <!-- Rotating Needle -->
+            <g transform="rotate(${speedAngle} 60 48)">
+              <line x1="60" y1="48" x2="60" y2="16" stroke="${speedInfo.color}" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="60" cy="48" r="3.5" fill="#e6ecf5"/>
+            </g>
+            <!-- Speed text sitting under pivot -->
+            <text x="60" y="44" text-anchor="middle" fill="#e6ecf5" font-family="'JetBrains Mono', monospace" font-size="14" font-weight="800">${t.speed}</text>
+            <text x="60" y="55" text-anchor="middle" fill="#6b7994" font-family="Inter, sans-serif" font-size="7.5" font-weight="700" letter-spacing="1">KM/H</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- FUEL TANK -->
+      <div class="widget-card">
+        <div class="widget-head">
+          <p class="eyebrow">Fuel Level</p>
+          <span class="widget-status-badge" style="${isLowFuel ? 'color:#ef4444; border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.12);' : 'color:#22d3ee; border-color:rgba(34,211,238,0.3); background:rgba(34,211,238,0.12);'}">
+            ${isLowFuel ? 'LOW ⚠️' : 'FUEL OK'}
+          </span>
+        </div>
+        <div class="fuel-wrap">
+          <div class="fuel-gauge-bar">
+            <div class="fuel-fill ${isLowFuel ? 'low' : ''}" style="height:${t.fuel}%;"></div>
+          </div>
+          <div class="fuel-readout">
+            <div class="fuel-pct mono" style="color:${isLowFuel ? '#ef4444' : '#22d3ee'};">${t.fuel}%</div>
+            <p style="font-size:9.5px; color:var(--ink-500); margin-top:2px;">Est. Range: <strong style="color:var(--ink-300);">${Math.round(fuelVal * 5.2)} km</strong></p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SUBGRID (2-COLUMN ELEGANT SPLIT) -->
+    <div class="telemetry-subgrid">
+      
+      <!-- LEFT: ELEGANT CAR & TYRE PRESSURE CHASSIS -->
+      <div class="car-tyre-section">
+        <div class="section-head">
+          <span style="font-size:14px;">🛞</span>
+          <p class="eyebrow">Tyre Pressure Telemetry</p>
+        </div>
+        <div class="car-viz-container">
+          <div class="tyre-col">
+            <div class="tyre-badge">
+              <span class="tyre-lbl">Front Left</span>
+              <div class="tyre-val ${tyreClass(t.tyrePressureFL)}" id="tyre-fl">${t.tyrePressureFL}</div>
+              <span class="tyre-unit">PSI</span>
+            </div>
+            <div class="tyre-badge">
+              <span class="tyre-lbl">Rear Left</span>
+              <div class="tyre-val ${tyreClass(t.tyrePressureRL)}" id="tyre-rl">${t.tyrePressureRL}</div>
+              <span class="tyre-unit">PSI</span>
+            </div>
+          </div>
+          <div class="car-svg-wrap">
+            <svg width="110" height="135" viewBox="0 0 160 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="carGrad" x1="80" y1="0" x2="80" y2="220" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="rgba(34,211,238,0.12)"/>
+                  <stop offset="50%" stop-color="rgba(59,130,246,0.06)"/>
+                  <stop offset="100%" stop-color="rgba(34,211,238,0.1)"/>
+                </linearGradient>
+              </defs>
+              <path d="M50 30 Q50 10 80 10 Q110 10 110 30 L115 60 L118 80 L118 160 L115 180 Q110 210 80 210 Q50 210 45 180 L42 160 L42 80 L45 60 Z"
+                fill="url(#carGrad)" stroke="rgba(34,211,238,0.3)" stroke-width="1.5"/>
+              <path d="M55 50 Q55 38 80 36 Q105 38 105 50 L108 72 L52 72 Z"
+                fill="rgba(34,211,238,0.1)" stroke="rgba(34,211,238,0.25)" stroke-width="1"/>
+              <path d="M55 175 Q55 188 80 190 Q105 188 105 175 L108 155 L52 155 Z"
+                fill="rgba(34,211,238,0.06)" stroke="rgba(34,211,238,0.2)" stroke-width="1"/>
+              <ellipse cx="38" cy="62" rx="6" ry="4" fill="rgba(34,211,238,0.1)" stroke="rgba(34,211,238,0.25)" stroke-width="1"/>
+              <ellipse cx="122" cy="62" rx="6" ry="4" fill="rgba(34,211,238,0.1)" stroke="rgba(34,211,238,0.25)" stroke-width="1"/>
+              <rect x="56" y="16" width="14" height="6" rx="3" fill="rgba(255,255,200,0.25)" stroke="rgba(255,255,200,0.3)" stroke-width="0.5"/>
+              <rect x="90" y="16" width="14" height="6" rx="3" fill="rgba(255,255,200,0.25)" stroke="rgba(255,255,200,0.3)" stroke-width="0.5"/>
+              <rect x="56" y="200" width="14" height="5" rx="2.5" fill="rgba(239,68,68,0.25)" stroke="rgba(239,68,68,0.3)" stroke-width="0.5"/>
+              <rect x="90" y="200" width="14" height="5" rx="2.5" fill="rgba(239,68,68,0.25)" stroke="rgba(239,68,68,0.3)" stroke-width="0.5"/>
+              <rect x="30" y="40" width="14" height="34" rx="5" fill="rgba(34,211,238,0.06)" stroke="rgba(34,211,238,0.3)" stroke-width="1.5"/>
+              <rect x="116" y="40" width="14" height="34" rx="5" fill="rgba(34,211,238,0.06)" stroke="rgba(34,211,238,0.3)" stroke-width="1.5"/>
+              <rect x="30" y="150" width="14" height="34" rx="5" fill="rgba(34,211,238,0.06)" stroke="rgba(34,211,238,0.3)" stroke-width="1.5"/>
+              <rect x="116" y="150" width="14" height="34" rx="5" fill="rgba(34,211,238,0.06)" stroke="rgba(34,211,238,0.3)" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="tyre-col">
+            <div class="tyre-badge">
+              <span class="tyre-lbl">Front Right</span>
+              <div class="tyre-val ${tyreClass(t.tyrePressureFR)}" id="tyre-fr">${t.tyrePressureFR}</div>
+              <span class="tyre-unit">PSI</span>
+            </div>
+            <div class="tyre-badge">
+              <span class="tyre-lbl">Rear Right</span>
+              <div class="tyre-val ${tyreClass(t.tyrePressureRR)}" id="tyre-rr">${t.tyrePressureRR}</div>
+              <span class="tyre-unit">PSI</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: CARGO & ROUTE LOGISTICS STACK -->
+      <div class="subgrid-right-col">
+        <!-- CARGO -->
+        <div class="cargo-widget-card">
+          <div class="cargo-box-graphic">
+            <span>${cargoMeta.icon}</span>
+          </div>
+          <div class="cargo-details">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <p class="eyebrow" style="margin:0;">Cargo Manifest</p>
+              <span class="widget-status-badge" style="color:${priorityColor}; border-color:${priorityColor}; background:rgba(0,0,0,0.3);">
+                ${t.cargoPriority}
+              </span>
+            </div>
+            <p class="cargo-title">${t.cargo}</p>
+            <p style="font-size:10px; color:var(--ink-500); margin:0;">${cargoMeta.label}</p>
+          </div>
+        </div>
+
+        <!-- ROUTE -->
+        <div class="route-widget-card">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <p class="eyebrow" style="margin:0;">Route Conditions</p>
+            <span style="font-size:10px; font-weight:600; color:var(--signal-400);">${t.routeCondition}</span>
+          </div>
+          <div class="route-path-graphic">
+            <div class="route-line-track">
+              <div class="route-line-fill"></div>
+            </div>
+            <div class="route-node" title="Pune">📍</div>
+            <div class="route-truck-pin" title="Current Location">🚛</div>
+            <div class="route-node" title="${destCity}">🏁</div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:9.5px; color:var(--ink-500);">
+            <span>Pune</span>
+            <span>Dest: <strong style="color:var(--ink-100);">${destCity}</strong></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  `;
+    }
+
+    /* ---------------- AGENT DEBATE FEED ---------------- */
+    
+    /* ---------------- TYPEWRITE HELPER ---------------- */
+    function typewrite(el, text, speed, onDone) {
+      let i = 0;
+      const cursor = document.createElement('span');
+      cursor.className = 'cursor';
+      el.textContent = '';
+      el.appendChild(cursor);
+      const id = setInterval(() => {
+        i++;
+        el.textContent = text.slice(0, i);
+        el.appendChild(cursor);
+        if (i >= text.length) {
+          clearInterval(id);
+          cursor.remove();
+          if (onDone) onDone();
+        }
+      }, speed);
+    }
+
+    const AGENTS = [
+      { key: 'critic', name: 'Critic Agent', role: 'Conflict & Scope Review', color: '#f59e0b', bg: 'rgba(245,158,11,.12)', icon: '⚖️' },
+      { key: 'adversarial', name: 'Adversarial Agent', role: 'Red Team', color: '#ef4444', bg: 'rgba(239,68,68,.12)', icon: '🔺' },
+      { key: 'safety', name: 'Safety Agent', role: 'Telemetry Watchdog', color: '#22d3ee', bg: 'rgba(34,211,238,.12)', icon: '🛡️' },
+      { key: 'maintenance', name: 'Maintenance Agent', role: 'Service Records', color: '#5fd4ff', bg: 'rgba(95,212,255,.12)', icon: '🔧' },
+      { key: 'operations', name: 'Operations Agent', role: 'Dispatch & Logistics', color: '#a78bfa', bg: 'rgba(167,139,250,.12)', icon: '🚚' }
+    ];
+
+    function findingBadgeStyle(finding) {
+      const f = String(finding).toUpperCase();
+      if (f.includes('FAIL') || f.includes('HAZARD') || f.includes('CHALLENGE') || f.includes('CRITICAL') || f.includes('HIGH')) {
+        return 'color:#ef4444; border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.12);';
+      } else if (f.includes('WARN') || f.includes('MEDIUM') || f.includes('RETRY') || f.includes('CONFLICT')) {
+        return 'color:#f59e0b; border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.12);';
+      } else {
+        return 'color:#22c55e; border-color:rgba(34,197,94,0.4); background:rgba(34,197,94,0.12);';
+      }
+    }
+
+    function agentMessage(agent, report) {
+      const d = report[agent.key];
+      if (!d) return 'Assessment completed.';
+      
+      if (agent.key === 'critic') {
+        return d.reasoning || (d.has_conflict 
+          ? 'Conflict detected across agent assessments. Evidence review required.' 
+          : 'No conflict detected. Evidence is sufficient. Conflict detected: no. Scope violation: no. More evidence required: no.');
+      }
+      if (agent.key === 'adversarial') {
+        return d.flaw_description || (d.challenge_successful 
+          ? 'Challenge raised. Engine temperature is elevated beyond safety thresholds.' 
+          : 'No exploitable flaw found in the prior findings. The debate holds.');
+      }
+      if (d.comments) return d.comments;
+      if (d.reasoning) return d.reasoning;
+      if (Array.isArray(d.findings) && d.findings.length > 0) return d.findings.join(' ');
+      
+      switch (agent.key) {
+        case 'safety':
+          return `Evaluated live telemetry against policy thresholds. Finding: ${d.finding || d.risk_level || 'CLEAR'} risk.`;
+        case 'maintenance':
+          return `Checked service history and mechanical health. Finding: ${d.finding || d.risk_level || 'CLEAR'} risk.`;
+        case 'operations':
+          return `Assessed cargo priority and delivery schedule. Finding: ${d.finding || d.risk_level || 'CLEAR'} risk.`;
+        default:
+          return 'Assessment completed with verified telemetry.';
+      }
+    }
+
+    function agentEvidenceText(agent, report) {
+      const d = report[agent.key];
+      if (!d) return '';
+      if (agent.key === 'safety') return typeof d.evidence === 'object' ? JSON.stringify(d.evidence, null, 2) : String(d.evidence || '');
+      if (agent.key === 'maintenance' || agent.key === 'operations') return typeof d.evidence === 'object' ? JSON.stringify(d.evidence, null, 2) : String(d.evidence || '');
+      if (agent.key === 'adversarial') return `challenge_successful: ${d.challenge_successful}`;
+      return '';
+    }
+
+    function runDebateFeed(report) {
+      console.log("runDebateFeed starting typewriter with report:", report);
+      if (loaderTickerTimer) { clearInterval(loaderTickerTimer); loaderTickerTimer = null; }
+      
+      const body = document.getElementById('feed-body');
+      if (!body || !report) return;
+
+      body.innerHTML = '';
+
+      // Render top route / cargo telemetry snippet as shown in spec screenshot
+      let metaSnippet = '';
+      if (typeof selectedId !== 'undefined' && selectedId && typeof FLEET !== 'undefined') {
+        const v = FLEET.find(f => f.id === selectedId);
+        metaSnippet = `{'destination': '${v ? v.dest || 'Mumbai' : 'Mumbai'}', 'cargo': '${v ? v.cargo || 'Vaccines' : 'Vaccines'}', 'priority': '${v ? v.priority || 'HIGH' : 'HIGH'}'}`;
+      } else {
+        metaSnippet = `{'destination': 'Mumbai', 'cargo': 'Vaccines', 'priority': 'HIGH'}`;
+      }
+
+      const topSnippetEl = document.createElement('div');
+      topSnippetEl.style.cssText = "padding:10px 12px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); margin-bottom:12px; font-family:'JetBrains Mono', monospace; font-size:11px; color:#a9b6cc;";
+      topSnippetEl.textContent = metaSnippet;
+      body.appendChild(topSnippetEl);
+
+      function spawnAgent(index) {
+        if (index >= AGENTS.length) {
+          console.log("All debate cards typed out. Showing banner...");
+          setTimeout(() => {
+            if (typeof evaluateBanner === 'function') evaluateBanner(report);
+            else if (typeof showBanner === 'function') showBanner(report);
+          }, 400);
+          return;
+        }
+
+        const agent = AGENTS[index];
+        const d = report[agent.key] || {};
+        
+        let finding = 'CLEAR';
+        if (agent.key === 'critic') {
+          finding = d.has_conflict ? 'CONFLICT' : 'CLEAR';
+        } else if (agent.key === 'adversarial') {
+          finding = d.challenge_successful ? 'CHALLENGED' : 'UPHELD';
+        } else {
+          finding = d.finding || d.risk_level || (d.approved === false ? 'HAZARD' : 'CLEAR');
+        }
+
+        const card = document.createElement('div');
+        card.className = 'agent-card';
+        card.innerHTML = `
+          <div class="agent-head">
+            <div class="agent-avatar" style="background:${agent.bg};">${agent.icon}</div>
+            <div>
+              <div class="agent-name" style="color:${agent.color};">${agent.name}</div>
+              <div style="font-size:10.5px; color:#6b7994;">${agent.role}</div>
+            </div>
+            <span class="agent-tag" style="${findingBadgeStyle(finding)}">${finding}</span>
+          </div>
+          <div class="agent-body"></div>
+          <div class="agent-evidence"></div>
+        `;
+
+        body.appendChild(card);
+        body.scrollTop = body.scrollHeight;
+
+        const bodyEl = card.querySelector('.agent-body');
+        const evEl = card.querySelector('.agent-evidence');
+        const msg = agentMessage(agent, report);
+
+        typewrite(bodyEl, msg, 12, () => {
+          const evText = agentEvidenceText(agent, report);
+          if (evText) {
+            evEl.textContent = evText;
+            requestAnimationFrame(() => evEl.classList.add('show'));
+          }
+          body.scrollTop = body.scrollHeight;
+          setTimeout(() => spawnAgent(index + 1), 350);
+        });
+      }
+
+      spawnAgent(0);
+    }
+
+    function renderDebateFeed(data) {
+      runDebateFeed(data);
+    }
+
+    window.renderDebateFeed = renderDebateFeed;
+    window.runDebateFeed = runDebateFeed;
+
+
+    /* ---------------- DECISION BANNER ---------------- */
+    function showBanner(report) {
+      const overlay = document.getElementById('banner-overlay');
+      const banner = document.getElementById('decision-banner');
+      const icon = document.getElementById('banner-icon');
+      const title = document.getElementById('banner-title');
+      const rec = document.getElementById('banner-rec');
+      const reasons = document.getElementById('banner-reasons');
+
+      const blocked = !!report.decision.human_approval_required;
+      banner.className = 'glass ' + (blocked ? 'red' : 'green');
+      icon.innerHTML = blocked
+        ? '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>'
+        : '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>';
+      title.textContent = blocked ? '⚠ HUMAN APPROVAL REQUIRED' : '✓ CLEAR TO PROCEED';
+      rec.textContent = report.decision.recommendation;
+
+      if (blocked && report.decision.block_reasons && report.decision.block_reasons.length) {
+        reasons.style.display = 'block';
+        reasons.innerHTML = '<div style="font-size:10px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-500); margin-bottom:6px;">🚨 Primary Block Reasons:</div>' +
+          report.decision.block_reasons.map(r => `<div style="font-size:12px; font-weight:600; color:var(--ink-100); padding:4px 0; display:flex; align-items:flex-start; gap:6px;"><span>${r}</span></div>`).join('');
+      } else {
+        reasons.style.display = 'none';
+      }
+
+      overlay.classList.add('show');
+    }
+
+    function hideBanner(instant) {
+      const overlay = document.getElementById('banner-overlay');
+      overlay.classList.remove('show');
+    }
+    document.getElementById('banner-close').addEventListener('click', () => hideBanner());
+    document.getElementById('banner-overlay').addEventListener('click', (e) => {
+      if (e.target.id === 'banner-overlay') hideBanner();
+    });
+
+    let loaderTickerTimer = null;
+    let threeAnimFrameId = null;
+
+    function renderAgentMeshLoader() {
+      const body = document.getElementById('feed-body');
+      if (!body) return;
+
+      body.innerHTML = `
+                <div class="minimal-loader-card">
+                    <!-- TOP: 3D MINIMAL ORB STAGE -->
+                    <div class="minimal-3d-stage" id="stage-3d-wrap">
+                        <div class="hud-corner tl"></div>
+                        <div class="hud-corner tr"></div>
+                        <div class="hud-corner bl"></div>
+                        <div class="hud-corner br"></div>
+                        <canvas id="minimal-3d-canvas"></canvas>
+                    </div>
+
+                    <!-- MIDDLE: AGENT ACTIVITY LOG PANEL -->
+                    <div class="agent-activity-panel">
+                        <div class="activity-head">
+                            <span class="title">AGENT ACTIVITY</span>
+                            <span class="live-tag"><span class="green-dot"></span> LIVE</span>
+                        </div>
+                        <div class="activity-log-list" id="activity-log-list"></div>
+                    </div>
+
+                    <!-- BOTTOM: PROGRESS FOOTER -->
+                    <div class="progress-footer">
+                        <div class="progress-head">
+                            <span>SYNCHRONIZING AGENTS</span>
+                            <span class="percent" id="sync-percent-text">0%</span>
+                        </div>
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" id="sync-progress-bar" style="width: 0%;"></div>
+                        </div>
+                        <div class="progress-subtext" id="sync-subtext">Establishing collective intelligence...</div>
+                    </div>
+                </div>
+            `;
+
+      // Initialize Minimalist 3D Wireframe Globe & Orbiting Star Orbs
+      try {
+        if (threeAnimFrameId) cancelAnimationFrame(threeAnimFrameId);
+        const canvas = document.getElementById('minimal-3d-canvas');
+        const stage = document.getElementById('stage-3d-wrap');
+
+        if (canvas && stage && typeof THREE !== 'undefined') {
+          const width = stage.clientWidth || 300;
+          const height = stage.clientHeight || 200;
+
+          const scene = new THREE.Scene();
+          const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
+          camera.position.set(0, 0.1, 15);
+
+          const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+          renderer.setSize(width, height);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+          // 1. Minimal Dot-Matrix Wireframe Sphere
+          const sphereGeo = new THREE.SphereGeometry(1.85, 32, 32);
+          const pCount = sphereGeo.attributes.position.count;
+          const pColors = new Float32Array(pCount * 3);
+          for (let i = 0; i < pCount; i++) {
+            pColors[i * 3] = 0.35;    // R
+            pColors[i * 3 + 1] = 0.75; // G
+            pColors[i * 3 + 2] = 0.95; // B
+          }
+          sphereGeo.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
+          const dotMat = new THREE.PointsMaterial({ size: 0.1, vertexColors: true, transparent: true, opacity: 0.85 });
+          const wireSphere = new THREE.Points(sphereGeo, dotMat);
+          scene.add(wireSphere);
+
+          // Inner Subtle Wireframe Grid
+          const innerGridGeo = new THREE.IcosahedronGeometry(1.65, 1);
+          const innerGridMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true, transparent: true, opacity: 0.18 });
+          const innerGrid = new THREE.Mesh(innerGridGeo, innerGridMat);
+          scene.add(innerGrid);
+
+          // 2. 5 Thin Elliptical Wire Rings
+          const orbitConfigs = [
+            { color: 0x3b82f6, rx: 5.0, ry: 3.2, tiltX: 0.5, tiltY: -0.3, speed: 0.9 }, // Blue
+            { color: 0xf59e0b, rx: 5.2, ry: 3.3, tiltX: -0.6, tiltY: 0.2, speed: 0.8 },  // Gold
+            { color: 0xa855f7, rx: 5.3, ry: 3.4, tiltX: 0.7, tiltY: 0.4, speed: 1.0 },  // Purple
+            { color: 0x14b8a6, rx: 5.1, ry: 3.2, tiltX: -0.4, tiltY: -0.7, speed: 0.85 },// Teal
+            { color: 0xf8fafc, rx: 5.4, ry: 3.5, tiltX: 0.2, tiltY: 0.8, speed: 0.95 }  // White
+          ];
+
+          const starNodes = [];
+
+          orbitConfigs.forEach((cfg, idx) => {
+            const curvePoints = [];
+            const segments = 80;
+            for (let i = 0; i <= segments; i++) {
+              const theta = (i / segments) * Math.PI * 2;
+              const lx = Math.cos(theta) * cfg.rx;
+              const ly = Math.sin(theta) * cfg.ry;
+              const vec = new THREE.Vector3(lx, ly, 0);
+              vec.applyAxisAngle(new THREE.Vector3(1, 0, 0), cfg.tiltX);
+              vec.applyAxisAngle(new THREE.Vector3(0, 1, 0), cfg.tiltY);
+              curvePoints.push(vec);
+            }
+
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(curvePoints);
+            const lineMat = new THREE.LineBasicMaterial({ color: cfg.color, transparent: true, opacity: 0.3 });
+            const orbitLine = new THREE.LineLoop(lineGeo, lineMat);
+            scene.add(orbitLine);
+
+            // 3. Glowing Star Node Sphere
+            const starGeo = new THREE.SphereGeometry(0.22, 16, 16);
+            const starMat = new THREE.MeshBasicMaterial({ color: cfg.color });
+            const starMesh = new THREE.Mesh(starGeo, starMat);
+            scene.add(starMesh);
+
+            starNodes.push({ mesh: starMesh, cfg: cfg, angle: (idx * Math.PI * 2) / 5 });
+          });
+
+          // 60FPS WebGL Loop
+          let clock = 0;
+          function animateMinimal3D() {
+            threeAnimFrameId = requestAnimationFrame(animateMinimal3D);
+            clock += 0.016;
+
+            wireSphere.rotation.y += 0.006;
+            innerGrid.rotation.y -= 0.004;
+
+            starNodes.forEach((node) => {
+              node.angle += 0.012 * node.cfg.speed;
+              const a = node.angle;
+
+              const lx = Math.cos(a) * node.cfg.rx;
+              const ly = Math.sin(a) * node.cfg.ry;
+              const vec = new THREE.Vector3(lx, ly, 0);
+              vec.applyAxisAngle(new THREE.Vector3(1, 0, 0), node.cfg.tiltX);
+              vec.applyAxisAngle(new THREE.Vector3(0, 1, 0), node.cfg.tiltY);
+
+              node.mesh.position.copy(vec);
+            });
+
+            renderer.render(scene, camera);
+          }
+          animateMinimal3D();
+        }
+      } catch (e) {
+        console.log("Minimal 3D canvas error:", e);
+      }
+
+      // Real-Time Log Stepper & Progress Tracker
+      const logContainer = document.getElementById('activity-log-list');
+      const percentEl = document.getElementById('sync-percent-text');
+      const barEl = document.getElementById('sync-progress-bar');
+      const subtextEl = document.getElementById('sync-subtext');
+
+      const logTasks = [
+        "Connecting to agent network...",
+        "Synchronizing telemetry streams...",
+        "Aggregating live vehicle data...",
+        "Running anomaly detection...",
+        "Evaluating risk parameters...",
+        "Cross-verifying with fleet history...",
+        "Calculating optimal response...",
+        "Finalizing insights...",
+        "Preparing recommendations...",
+        "Ready to present results"
+      ];
+
+      const subtexts = [
+        "Establishing collective intelligence...",
+        "Auditing domain boundaries...",
+        "Synthesizing policy consensus...",
+        "Finalizing multi-agent assessment..."
+      ];
+
+      // Generate initial log items
+      const now = new Date();
+      let html = '';
+      logTasks.forEach((task, idx) => {
+        const t = new Date(now.getTime() + idx * 1000);
+        const timeStr = t.toTimeString().split(' ')[0];
+        const statusClass = idx === 0 ? 'active' : 'pending';
+        const icon = idx === 0 ? '◌' : '◌';
+        html += `
+                    <div class="log-item-row ${idx === 0 ? 'active' : ''}" id="log-row-${idx}">
+                        <div class="log-item-left">
+                            <span class="time">${timeStr}</span>
+                            <span class="bullet">•</span>
+                            <span class="text">${task}</span>
+                        </div>
+                        <span class="log-item-status ${statusClass}" id="log-status-${idx}">${icon}</span>
+                    </div>
+                `;
+      });
+      logContainer.innerHTML = html;
+
+      let currentStep = 0;
+      let percent = 0;
+
+      if (loaderTickerTimer) clearInterval(loaderTickerTimer);
+      loaderTickerTimer = setInterval(() => {
+        percent += 3;
+        if (percent > 100) percent = 100;
+
+        if (percentEl) percentEl.textContent = `${percent}%`;
+        if (barEl) barEl.style.width = `${percent}%`;
+
+        // Rotate subtexts
+        if (subtextEl && percent % 25 === 0) {
+          const subIdx = Math.floor(percent / 25) % subtexts.length;
+          subtextEl.textContent = subtexts[subIdx];
+        }
+
+        // Advance log rows
+        const targetStep = Math.floor((percent / 100) * logTasks.length);
+        if (targetStep > currentStep && currentStep < logTasks.length) {
+          // Mark previous step done
+          const prevRow = document.getElementById(`log-row-${currentStep}`);
+          const prevStatus = document.getElementById(`log-status-${currentStep}`);
+          if (prevRow) { prevRow.classList.remove('active'); prevRow.classList.add('done'); }
+          if (prevStatus) { prevStatus.textContent = '✓'; prevStatus.className = 'log-item-status done'; }
+
+          currentStep = targetStep;
+          if (currentStep < logTasks.length) {
+            const currRow = document.getElementById(`log-row-${currentStep}`);
+            const currStatus = document.getElementById(`log-status-${currentStep}`);
+            if (currRow) currRow.classList.add('active');
+            if (currStatus) { currStatus.textContent = '◌'; currStatus.className = 'log-item-status active'; }
+          }
+
+          // Auto scroll log list
+          logContainer.scrollTop = logContainer.scrollHeight;
+        }
+      }, 300);
+    }
+
+    /* ---------------- TRIGGER INVESTIGATION (CONNECTED TO BACKEND LLM) ---------------- */
+    async function triggerInvestigation() {
+      if (!selectedId) return;
+
+      const btn = document.getElementById('trigger-btn');
+      const label = document.getElementById('trigger-label');
+      btn.disabled = true;
+      btn.classList.add('busy');
+      label.innerHTML = '<svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg> Running Multi-Agent Audit…';
+
+      hideBanner(true);
+      renderAgentMeshLoader();
+
+      try {
+        const res = await fetch(`${BASE_URL}/incidents/${selectedId}/investigate`, { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data = await res.json();
+
+        // INSTANT CUT: Stop loader & start typewriter debate feed immediately when LLM responds!
+        if (typeof loaderTickerTimer !== 'undefined' && loaderTickerTimer) { 
+          clearInterval(loaderTickerTimer); 
+          loaderTickerTimer = null; 
+        }
+        if (typeof threeAnimFrameId !== 'undefined' && threeAnimFrameId) {
+          cancelAnimationFrame(threeAnimFrameId);
+          threeAnimFrameId = null;
+        }
+
+        renderDebateFeed(data);
+      } catch (e) {
+        console.warn("Backend LLM failed or offline:", e);
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('busy');
+        label.textContent = 'Trigger Investigation';
+      }
+    }
+    document.getElementById('trigger-btn').addEventListener('click', triggerInvestigation);
+
+    /* ---------------- BACKEND STATUS PING ---------------- */
+    async function pingBackend() {
+      const el = document.getElementById('backend-status');
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 1500);
+        const res = await fetch(BASE_URL, { signal: ctrl.signal });
+        clearTimeout(t);
+        el.textContent = res.ok ? 'connected' : 'unreachable (demo mode)';
+      } catch {
+        el.textContent = 'unreachable (demo mode)';
+      }
+    }
+
+    /* ---------------- INIT ---------------- */
+    pingBackend();
+    loadFleet();
+    // Refresh fleet list every 5 seconds for live status updates
+    setInterval(async () => {
+      try {
+        const res = await fetch(BASE_URL + '/vehicles');
+        if (res.ok) {
+          const vehicles = await res.json();
+          vehicles.forEach(v => {
+            const existing = FLEET.find(f => f.id === v.vehicle_id);
+            if (existing) {
+              let status = 'ACTIVE';
+              if (v.engine_temperature > 100) status = 'WARNING';
+              if (v.engine_temperature > 110) status = 'CRITICAL';
+              if (v.scenario === 'TYRE_PRESSURE_DROP') status = 'WARNING';
+              if (v.speed < 5) status = 'IDLE';
+              existing.status = status;
+            }
+          });
+          renderFleet();
+        }
+      } catch (e) { }
+    }, 5000);
+
+    /* ---------------- LIVE ODOMETER POLLING ---------------- */
+    setInterval(async () => {
+      if (!selectedId) return;
+      try {
+        const telRes = await fetch(`${BASE_URL}/vehicles/${selectedId}/telemetry`);
+        if (!telRes.ok) return;
+        const liveT = await telRes.json();
+
+        // We know the order of gauges in the DOM: 0: Temp, 1: Speed, 2: Pressure, 3: Fuel
+        const vals = [
+          { val: liveT.engine_temperature, max: 130, danger: 100, decimals: 1 },
+          { val: liveT.speed, max: 120, decimals: 1 },
+          { val: liveT.tyre_pressure.front_left, max: 45, danger: 28, decimals: 1 },
+          { val: liveT.fuel_level, max: 100, decimals: 0 }
+        ];
+
+        const cards = document.querySelectorAll('.gauge-card');
+        if (cards.length === 4) {
+          cards.forEach((card, i) => {
+            const v = vals[i].val;
+            const max = vals[i].max;
+            const danger = vals[i].danger;
+
+            // Update value text
+            card.querySelector('.val').textContent = v.toFixed(vals[i].decimals);
+
+            // Calculate ring
+            const pct = Math.max(0, Math.min(1, v / max));
+            const radius = 46; // Match the radius in HTML
+            const circumference = 2 * Math.PI * radius;
+            const dash = circumference * pct;
+
+            const ring = card.querySelector('.fg-ring');
+            ring.style.strokeDashoffset = (circumference - dash);
+
+            // Update colors
+            const isDanger = danger !== undefined && v >= danger;
+            const isWarn = danger !== undefined && v >= danger * 0.9 && v < danger;
+            const ringColor = isDanger ? '#ef4444' : isWarn ? '#f59e0b' : '#22d3ee';
+            ring.setAttribute('stroke', ringColor);
+
+            const statusTextEl = card.querySelector('.status-text');
+            statusTextEl.style.color = ringColor;
+            statusTextEl.textContent = isDanger ? 'Above threshold' : isWarn ? 'Approaching limit' : 'Nominal';
+
+            const wrap = card.querySelector('.gauge-ring-wrap');
+            wrap.style.boxShadow = isDanger ? '0 0 20px rgba(239,68,68,.4)' : isWarn ? '0 0 20px rgba(245,158,11,.3)' : '0 0 20px rgba(34,211,238,.35)';
+          });
+        }
+        // Update SVG car tyre pressure visualization
+        const tyreData = [
+          { id: 'tyre-fl', val: liveT.tyre_pressure.front_left },
+          { id: 'tyre-fr', val: liveT.tyre_pressure.front_right },
+          { id: 'tyre-rl', val: liveT.tyre_pressure.rear_left },
+          { id: 'tyre-rr', val: liveT.tyre_pressure.rear_right },
+        ];
+        tyreData.forEach(td => {
+          const el = document.getElementById(td.id);
+          if (el) {
+            el.textContent = td.val.toFixed(1);
+            el.className = 'tyre-val ' + (td.val < 28 ? 'danger' : td.val < 30 ? 'warn' : 'ok');
+          }
+        });
+      } catch (e) { }
+    }, 2000);
+
+  </script>
+
+  <!-- ============ ADD VEHICLE MODAL (FOR HACKATHON JUDGES) ============ -->
+  <div id="add-modal-overlay" class="modal-overlay">
+    <div class="modal-card glass">
+      <div class="modal-head">
+        <div>
+          <span class="modal-head-pill">⚖️ AI EVALUATION COCKPIT</span>
+          <h3 class="modal-title">Configure Evaluation Vehicle</h3>
+          <p class="modal-sub">Input telemetry parameters to evaluate multi-agent reasoning in real time</p>
+        </div>
+        <button id="close-modal-btn" class="modal-close" onclick="closeAddModal()">&times;</button>
+      </div>
+
+      <!-- VISUAL PRESET CARDS -->
+      <div style="margin-bottom:6px;">
+        <p class="eyebrow" style="margin:0;">Quick Evaluation Scenarios:</p>
+      </div>
+      <div class="preset-grid">
+        <div class="preset-card-btn" onclick="applyPreset('overheat')">
+          <span class="p-icon">🔥</span>
+          <span class="p-title">Thermal Test</span>
+          <span class="p-sub">112.5°C Temp</span>
+        </div>
+        <div class="preset-card-btn" onclick="applyPreset('blowout')">
+          <span class="p-icon">🛞</span>
+          <span class="p-title">Flat Tyre Test</span>
+          <span class="p-sub">16.0 PSI Blowout</span>
+        </div>
+        <div class="preset-card-btn" onclick="applyPreset('vaccines')">
+          <span class="p-icon">💉</span>
+          <span class="p-title">Vaccine Test</span>
+          <span class="p-sub">Expires 2h + Jam</span>
+        </div>
+        <div class="preset-card-btn" onclick="applyPreset('safe')">
+          <span class="p-icon">✅</span>
+          <span class="p-title">All Safe Test</span>
+          <span class="p-sub">Nominal Baseline</span>
+        </div>
+      </div>
+
+      <form id="add-truck-form" class="modal-form" onsubmit="submitCustomTruck(event)">
+
+        <!-- SECTION 1: IDENTITY -->
+        <div class="form-section-title">🚛 Vehicle Identity & Route</div>
+        <div class="form-row 3col">
+          <div class="field">
+            <label>Vehicle ID</label>
+            <input type="text" id="add-vid" value="TRUCK-JUDGE-01" required />
+          </div>
+          <div class="field">
+            <label>Destination City</label>
+            <input type="text" id="add-dest" value="Goa" required />
+          </div>
+          <div class="field">
+            <label>Driver Name</label>
+            <input type="text" id="add-driver" value="M. Sharma (Judge)" required />
+          </div>
+        </div>
+
+        <!-- SECTION 2: TELEMETRY -->
+        <div class="form-section-title">⚡ Sensor Telemetry Inputs</div>
+        <div class="form-row 3col">
+          <div class="field">
+            <label>Engine Temp (°C)</label>
+            <input type="number" id="add-temp" value="112.0" step="0.1" required />
+          </div>
+          <div class="field">
+            <label>Cruising Speed (km/h)</label>
+            <input type="number" id="add-speed" value="65.0" step="0.1" required />
+          </div>
+          <div class="field">
+            <label>Fuel Level (%)</label>
+            <input type="number" id="add-fuel" value="85.0" step="1" required />
+          </div>
+        </div>
+
+        <!-- SECTION 3: TYRE PRESSURES -->
+        <div class="form-section-title">🛞 Tyre Pressure Monitors (PSI)</div>
+        <div class="form-row 4col">
+          <div class="field">
+            <label>Front Left</label>
+            <input type="number" id="add-fl" value="32.0" step="0.1" required />
+          </div>
+          <div class="field">
+            <label>Front Right</label>
+            <input type="number" id="add-fr" value="32.0" step="0.1" required />
+          </div>
+          <div class="field">
+            <label>Rear Left</label>
+            <input type="number" id="add-rl" value="32.0" step="0.1" required />
+          </div>
+          <div class="field">
+            <label>Rear Right</label>
+            <input type="number" id="add-rr" value="32.0" step="0.1" required />
+          </div>
+        </div>
+
+        <!-- SECTION 4: LOGISTICS & DRIVER STATUS -->
+        <div class="form-section-title">📦 Logistics & Driver Shift Status</div>
+        <div class="form-row 3col">
+          <div class="field">
+            <label>Cargo Description</label>
+            <input type="text" id="add-cargo" value="Vaccines (Expires in 3 hours)" required />
+          </div>
+          <div class="field">
+            <label>Cargo Priority</label>
+            <select id="add-priority">
+              <option value="HIGH">HIGH Priority</option>
+              <option value="MEDIUM">MEDIUM Priority</option>
+              <option value="LOW">LOW Priority</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Driver Shift Status</label>
+            <input type="text" id="add-driver-status" value="Shift ends in 20 minutes" required />
+          </div>
+        </div>
+        <div class="field">
+          <label>Route & Traffic Conditions</label>
+          <input type="text" id="add-cond" value="Heavy Rain & Construction Zone" required />
+        </div>
+
+        <!-- SECTION 5: MAINTENANCE RECORDS -->
+        <div class="form-section-title">🔧 Maintenance Service Records</div>
+        <div class="form-row 2col">
+          <div class="field">
+            <label>Open Work Orders</label>
+            <select id="add-work-orders">
+              <option value="0">0 Open Work Orders (Nominal)</option>
+              <option value="1">1 Open Work Order (Minor)</option>
+              <option value="2">2 Open Work Orders (HIGH Risk)</option>
+              <option value="3">3+ Open Work Orders (Critical)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Last Service Date</label>
+            <input type="date" id="add-service-date" value="2026-08-20" required />
+          </div>
+        </div>
+
+        <!-- SECTION 6: JUDGE NOTES & CUSTOM SCENARIOS -->
+        <div class="form-section-title">⚖️ Judge Evaluation Notes & Instructions</div>
+        <div class="field">
+          <label>Custom Scenario Comments / AI Evaluation Instructions</label>
+          <textarea id="add-notes" rows="2"
+            style="font-family:'JetBrains Mono',monospace; font-size:11.5px; padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.12); background:rgba(0,0,0,0.45); color:var(--ink-100); outline:none;"
+            placeholder="e.g. Verify if driver shift deadline & vaccine expiration cause a severe operational violation."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+          <button type="submit" class="btn-submit">🚀 Save & Run Multi-Agent Audit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ SYSTEM ARCHITECTURE MODAL (SUPER SIMPLE LANGUAGE) ============ -->
+  <div id="arch-modal-overlay" class="modal-overlay">
+    <div class="modal-card arch-modal-card">
+      <div class="modal-head">
+        <div>
+          <span class="modal-head-pill">⚡ HOW OUR AI WORKS</span>
+          <h3 class="modal-title">HOW OUR 5 AI AGENTS WORK TOGETHER</h3>
+          <p class="modal-sub">Why 5 specialized AI agents are safer than 1 single ChatGPT prompt</p>
+        </div>
+        <button class="modal-close" id="arch-modal-close" onclick="closeArchModal()">×</button>
+      </div>
+
+      <!-- DAG FLOW CHART -->
+      <div class="arch-dag-container">
+        <div class="dag-title">HOW AN INVESTIGATION RUNS STEP-BY-STEP</div>
+        <div class="dag-nodes-grid">
+          <div class="dag-node-card safety">
+            <div class="n-head">🛡️ Safety Agent</div>
+            <div class="n-body">Checks truck sensors (engine heat, tyre pressure) and flags driver safety threats.</div>
+          </div>
+          <div class="dag-node-card maint">
+            <div class="n-head">🔧 Maintenance Agent</div>
+            <div class="n-body">Checks repair records to make sure the truck is not overdue for service.</div>
+          </div>
+          <div class="dag-node-card ops">
+            <div class="n-head">🚚 Operations Agent</div>
+            <div class="n-body">Checks delivery deadlines, driver shift hours, and urgent cargo priorities.</div>
+          </div>
+          <div class="dag-node-card critic">
+            <div class="n-head">⚖️ Critic Agent</div>
+            <div class="n-body">Double-checks all facts to make sure no AI agent made up false statements.</div>
+          </div>
+          <div class="dag-node-card adv">
+            <div class="n-head">🔺 Red Team Agent</div>
+            <div class="n-body">Plays "Devil's Advocate" to search for hidden dangers before giving approval.</div>
+          </div>
+          <div class="dag-node-card decision">
+            <div class="n-head">✅ Policy Guard</div>
+            <div class="n-body">Automatically pauses high-risk trucks until a human operator approves.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WHY MULTI-AGENT CARDS -->
+      <div class="arch-value-grid">
+        <div class="arch-v-card">
+          <div class="v-icon">🛡️</div>
+          <div class="v-title">1. Zero Blindspots</div>
+          <div class="v-sub">1 AI can easily miss a detail, but 5 specialized AI agents check each other's work.</div>
+        </div>
+        <div class="arch-v-card">
+          <div class="v-icon">🔍</div>
+          <div class="v-title">2. No Made-Up Facts</div>
+          <div class="v-sub">The Critic Agent verifies every number against real truck sensor data.</div>
+        </div>
+        <div class="arch-v-card">
+          <div class="v-icon">🚨</div>
+          <div class="v-title">3. Human Safety First</div>
+          <div class="v-sub">Dangerous trucks are stopped immediately for human review to prevent accidents.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+
+
+</html>
