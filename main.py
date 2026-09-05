@@ -248,13 +248,11 @@ async def set_scenario(vehicle_id: str, req: ScenarioRequest):
     VEHICLES[vehicle_id].scenario = req.scenario
     return {"message": f"Scenario for {vehicle_id} set to {req.scenario.value}"}
 
-class InvestigatePayload(BaseModel):
-    telemetry: dict = None
-    driver: str = None
-    route: str = None
+from typing import Optional
+from fastapi import Body
 
 @app.post("/incidents/{vehicle_id}/investigate")
-def trigger_investigation(vehicle_id: str, payload: InvestigatePayload = None):
+def trigger_investigation(vehicle_id: str, payload: Optional[dict] = Body(None)):
     if not VEHICLES:
         init_vehicles()
         
@@ -265,7 +263,7 @@ def trigger_investigation(vehicle_id: str, payload: InvestigatePayload = None):
         dest, cargo, priority, cond = "Unknown", "General Cargo", "HIGH", "Normal"
         driver_status, judge_notes = "Shift active", ""
 
-        if payload and payload.telemetry:
+        if payload and isinstance(payload, dict) and 'telemetry' in payload:
             tel = payload.telemetry
             speed = float(tel.get("speed", 65.0))
             temp = float(tel.get("engineTemp", 85.0))
@@ -274,6 +272,7 @@ def trigger_investigation(vehicle_id: str, payload: InvestigatePayload = None):
             rl = float(tel.get("tyrePressureRL", 32.0))
             rr = float(tel.get("tyrePressureRR", 32.0))
             cargo = tel.get("cargo", "General Cargo")
+            dest = tel.get("dest", "Goa")
             priority = tel.get("cargoPriority", "HIGH")
             cond = tel.get("routeCondition", "Normal")
             driver_status = tel.get("driver_status", "Shift active")
