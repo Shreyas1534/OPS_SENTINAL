@@ -14,7 +14,8 @@ class HarnessState(TypedDict, total=False):
     adversarial: Dict[str, Any]
     decision: Dict[str, Any]
 
-with open("policy.yaml", "r") as f:
+policy_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "policy.yaml")
+with open(policy_file_path, "r") as f:
     POLICY = yaml.safe_load(f)
 
 def safety_node(state: HarnessState):

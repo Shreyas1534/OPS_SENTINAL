@@ -1,3 +1,4 @@
+import os
 import asyncio
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -25,11 +26,17 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     init_vehicles()
-    asyncio.create_task(simulation_loop())
-    asyncio.create_task(incident_engine_loop())
+    if not os.environ.get("VERCEL"):
+        try:
+            asyncio.create_task(simulation_loop())
+            asyncio.create_task(incident_engine_loop())
+        except Exception:
+            pass
 
 @app.get("/vehicles")
 async def get_all_vehicles() -> List[Vehicle]:
+    if not VEHICLES:
+        init_vehicles()
     return list(VEHICLES.values())
 
 @app.get("/vehicles/{vehicle_id}")
@@ -262,4 +269,4 @@ def trigger_investigation(vehicle_id: str):
 
 @app.get("/")
 def read_root():
-    return FileResponse("index.html")
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html"))
