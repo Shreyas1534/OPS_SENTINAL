@@ -9,8 +9,14 @@ import instructor
 from schemas import AgentAssessment, CriticAssessment, AdversarialChallenge, FinalDecision
 
 load_dotenv()
-api_key = os.getenv("GROQ_API_KEY")
-client = instructor.from_groq(Groq(api_key=api_key), mode=instructor.Mode.JSON)
+
+def get_client():
+    api_key = os.getenv("GROQ_API_KEY")
+    try:
+        return instructor.from_groq(Groq(api_key=api_key), mode=instructor.Mode.JSON)
+    except Exception as e:
+        print("Failed to initialize Groq client:", e)
+        return None
 
 MODEL = "openai/gpt-oss-20b"
 
@@ -34,9 +40,9 @@ def run_safety_agent(vehicle_id: str) -> AgentAssessment:
                 "timestamp": v.last_updated.isoformat()
             }
             if vehicle_id in CUSTOM_CARGO_MAP:
-                c = CUSTOM_CARGO_MAP[vehicle_id]
-                if c.get("driver_status"): data["driver_status"] = c["driver_status"]
-                if c.get("judge_notes"): data["judge_notes"] = c["judge_notes"]
+                c_info = CUSTOM_CARGO_MAP[vehicle_id]
+                if c_info.get("driver_status"): data["driver_status"] = c_info["driver_status"]
+                if c_info.get("judge_notes"): data["judge_notes"] = c_info["judge_notes"]
         else:
             data = {"error": "Vehicle not found"}
     except Exception as e:
@@ -57,7 +63,9 @@ def run_safety_agent(vehicle_id: str) -> AgentAssessment:
     Set `missing_evidence` to an empty list [].
     """
     try:
-        return client.chat.completions.create(
+        c = get_client()
+        if not c: raise ValueError('Groq client uninitialized')
+        return c.chat.completions.create(
             model=MODEL,
             response_model=AgentAssessment,
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Data: {json.dumps(data)}"}],
@@ -77,10 +85,10 @@ def run_maintenance_agent(vehicle_id: str) -> AgentAssessment:
         from simulator import VEHICLES, init_vehicles
         from main import CUSTOM_CARGO_MAP
         if not VEHICLES: init_vehicles()
-        c = CUSTOM_CARGO_MAP.get(vehicle_id, {})
+        c_info = CUSTOM_CARGO_MAP.get(vehicle_id, {})
         data = {
-            "last_service_date": c.get("last_service_date", "2026-08-01"),
-            "open_work_orders": c.get("open_work_orders", 0),
+            "last_service_date": c_info.get("last_service_date", "2026-08-01"),
+            "open_work_orders": c_info.get("open_work_orders", 0),
             "last_synced": datetime.now(timezone.utc).isoformat(),
             "status": "OK"
         }
@@ -102,7 +110,9 @@ def run_maintenance_agent(vehicle_id: str) -> AgentAssessment:
     Set `missing_evidence` to an empty list [].
     """
     try:
-        return client.chat.completions.create(
+        c = get_client()
+        if not c: raise ValueError('Groq client uninitialized')
+        return c.chat.completions.create(
             model=MODEL,
             response_model=AgentAssessment,
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Data: {json.dumps(data)}"}],
@@ -161,7 +171,9 @@ def run_operations_agent(vehicle_id: str) -> AgentAssessment:
     Set `missing_evidence` to an empty list [].
     """
     try:
-        return client.chat.completions.create(
+        c = get_client()
+        if not c: raise ValueError('Groq client uninitialized')
+        return c.chat.completions.create(
             model=MODEL,
             response_model=AgentAssessment,
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Data: {json.dumps(data)}"}],
@@ -189,12 +201,22 @@ def run_critic_agent(safety: dict, maintenance: dict, operations: dict) -> Criti
     CRITICAL: Output the JSON schema.
     """
     user_prompt = f"Safety: {safety}\nMaintenance: {maintenance}\nOperations: {operations}"
-    return client.chat.completions.create(
-        model=MODEL,
-        response_model=CriticAssessment,
-        messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-        max_retries=2
-    )
+    try:
+        c = get_client()
+        if not c: raise ValueError('Groq client uninitialized')
+        return c.chat.completions.create(
+            model=MODEL,
+            response_model=CriticAssessment,
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            max_retries=2
+        )
+    except Exception as e:
+        return CriticAssessment(
+            has_conflict=False,
+            scope_violation_detected=False,
+            requires_more_evidence=False,
+            reasoning=f"LLM API Failure: {str(e)}"
+        )
 
 def run_adversarial_agent(safety: dict, maintenance: dict, operations: dict, critic: dict) -> AdversarialChallenge:
     system_prompt = """You are the Adversarial Agent (Red Team).
@@ -208,13 +230,21 @@ def run_adversarial_agent(safety: dict, maintenance: dict, operations: dict, cri
     CRITICAL: Output the JSON schema.
     """
     user_prompt = f"Safety: {safety}\nMaintenance: {maintenance}\nOperations: {operations}\nCritic: {critic}"
-    return client.chat.completions.create(
-        model=MODEL,
-        response_model=AdversarialChallenge,
-        messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-        max_retries=2
-    )
-    
+    try:
+        c = get_client()
+        if not c: raise ValueError('Groq client uninitialized')
+        return c.chat.completions.create(
+            model=MODEL,
+            response_model=AdversarialChallenge,
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            max_retries=2
+        )
+    except Exception as e:
+        return AdversarialChallenge(
+            challenge_successful=False,
+            flaw_description=f"LLM API Failure: {str(e)}"
+        )
+
 def run_decision_agent(safety: dict, maintenance: dict, operations: dict, critic: dict, adversarial: dict) -> FinalDecision:
     system_prompt = """You are the Final Decision Agent.
     Based on all evidence, the Critic's review, and the Adversarial Agent's challenge, make a final operational recommendation.
@@ -222,9 +252,17 @@ def run_decision_agent(safety: dict, maintenance: dict, operations: dict, critic
     CRITICAL: Output the JSON schema.
     """
     user_prompt = f"Safety: {safety}\nMaint: {maintenance}\nOps: {operations}\nCritic: {critic}\nAdversarial: {adversarial}"
-    return client.chat.completions.create(
-        model=MODEL,
-        response_model=FinalDecision,
-        messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-        max_retries=2
-    )
+    try:
+        c = get_client()
+        if not c: raise ValueError('Groq client uninitialized')
+        return c.chat.completions.create(
+            model=MODEL,
+            response_model=FinalDecision,
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            max_retries=2
+        )
+    except Exception as e:
+        return FinalDecision(
+            recommendation=f"LLM API Failure: {str(e)}",
+            human_approval_required=True
+        )
