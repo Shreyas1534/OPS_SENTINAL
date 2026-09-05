@@ -2736,61 +2736,82 @@
     let FLEET = [];
 
     // Fetch all trucks dynamically from the backend API
+    const MOCK_VEHICLES = [
+      { id: "TRUCK-1001", driver: "R. Kadam", route: "Pune → Mumbai", status: "ACTIVE", telemetry: { engineTemp: "92.0", speed: "65.0", tyrePressure: "32.0", tyrePressureFL: "32.0", tyrePressureFR: "32.0", tyrePressureRL: "32.0", tyrePressureRR: "32.0", fuel: "74", cargo: "Auto Parts", cargoPriority: "LOW", routeCondition: "Clear highway" } },
+      { id: "TRUCK-1002", driver: "S. Patil", route: "Pune → Bengaluru", status: "WARNING", telemetry: { engineTemp: "108.2", speed: "45.0", tyrePressure: "31.0", tyrePressureFL: "31.0", tyrePressureFR: "31.0", tyrePressureRL: "31.0", tyrePressureRR: "31.0", fuel: "45", cargo: "Industrial Machinery", cargoPriority: "MEDIUM", routeCondition: "Heavy rain on NH48" } },
+      { id: "TRUCK-1003", driver: "A. Verma", route: "Pune → Nashik", status: "WARNING", telemetry: { engineTemp: "84.0", speed: "72.0", tyrePressure: "12.0", tyrePressureFL: "12.0", tyrePressureFR: "32.0", tyrePressureRL: "32.0", tyrePressureRR: "32.0", fuel: "88", cargo: "Electronics", cargoPriority: "HIGH", routeCondition: "Clear, light traffic" } },
+      { id: "TRUCK-1004", driver: "N. Deshmukh", route: "Pune → Hyderabad", status: "ACTIVE", telemetry: { engineTemp: "89.0", speed: "55.0", tyrePressure: "33.0", tyrePressureFL: "33.0", tyrePressureFR: "33.0", tyrePressureRL: "33.0", tyrePressureRR: "33.0", fuel: "31", cargo: "Perishables", cargoPriority: "HIGH", routeCondition: "Heavy traffic, construction" } },
+      { id: "TRUCK-1005", driver: "V. Singh", route: "Pune → Delhi", status: "ACTIVE", telemetry: { engineTemp: "85.0", speed: "80.0", tyrePressure: "32.0", tyrePressureFL: "32.0", tyrePressureFR: "32.0", tyrePressureRL: "32.0", tyrePressureRR: "32.0", fuel: "62", cargo: "Vaccines (Expires in 4 hours)", cargoPriority: "HIGH", routeCondition: "Massive traffic jam on Route 66" } },
+      { id: "TRUCK-1006", driver: "M. Das", route: "Pune → Kolkata", status: "CRITICAL", telemetry: { engineTemp: "114.0", speed: "35.0", tyrePressure: "28.0", tyrePressureFL: "28.0", tyrePressureFR: "28.0", tyrePressureRL: "28.0", tyrePressureRR: "28.0", fuel: "19", cargo: "Chemicals", cargoPriority: "CRITICAL", routeCondition: "Moderate traffic" } },
+      { id: "TRUCK-1007", driver: "K. Reddy", route: "Pune → Chennai", status: "ACTIVE", telemetry: { engineTemp: "81.0", speed: "78.0", tyrePressure: "34.0", tyrePressureFL: "34.0", tyrePressureFR: "34.0", tyrePressureRL: "34.0", tyrePressureRR: "34.0", fuel: "81", cargo: "Textiles", cargoPriority: "LOW", routeCondition: "Clear" } },
+      { id: "TRUCK-1008", driver: "J. Patel", route: "Pune → Ahmedabad", status: "ACTIVE", telemetry: { engineTemp: "86.0", speed: "60.0", tyrePressure: "32.0", tyrePressureFL: "32.0", tyrePressureFR: "32.0", tyrePressureRL: "32.0", tyrePressureRR: "32.0", fuel: "55", cargo: "Furniture", cargoPriority: "LOW", routeCondition: "Clear" } },
+      { id: "TRUCK-1009", driver: "R. Sharma", route: "Pune → Jaipur", status: "ACTIVE", telemetry: { engineTemp: "90.0", speed: "68.0", tyrePressure: "31.0", tyrePressureFL: "31.0", tyrePressureFR: "31.0", tyrePressureRL: "31.0", tyrePressureRR: "31.0", fuel: "40", cargo: "Medical Supplies", cargoPriority: "HIGH", routeCondition: "Clear" } },
+      { id: "TRUCK-1010", driver: "P. Yadav", route: "Pune → Lucknow", status: "ACTIVE", telemetry: { engineTemp: "82.0", speed: "70.0", tyrePressure: "33.0", tyrePressureFL: "33.0", tyrePressureFR: "33.0", tyrePressureRL: "33.0", tyrePressureRR: "33.0", fuel: "67", cargo: "Steel Pipes", cargoPriority: "MEDIUM", routeCondition: "Slow moving traffic" } }
+    ];
+
     async function loadFleet() {
       try {
         const res = await fetch(BASE_URL + '/vehicles');
         if (res.ok) {
           const vehicles = await res.json();
-          FLEET = vehicles.map(v => {
-            // Determine status badge based on scenario/telemetry
-            let status = 'ACTIVE';
-            if (v.engine_temperature > 100) status = 'WARNING';
-            if (v.engine_temperature > 110) status = 'CRITICAL';
-            if (v.scenario === 'TYRE_PRESSURE_DROP') status = 'WARNING';
-            if (v.speed < 5) status = 'IDLE';
+          if (Array.isArray(vehicles) && vehicles.length > 0) {
+            FLEET = vehicles.map(v => {
+              let status = 'ACTIVE';
+              if (v.engine_temperature > 100) status = 'WARNING';
+              if (v.engine_temperature > 110) status = 'CRITICAL';
+              if (v.scenario === 'TYRE_PRESSURE_DROP') status = 'WARNING';
+              if (v.speed < 5) status = 'IDLE';
 
-            return {
-              id: v.vehicle_id,
-              driver: '—',
-              route: '—',
-              status: status,
-              telemetry: {
-                engineTemp: v.engine_temperature.toFixed(1),
-                speed: v.speed.toFixed(1),
-                tyrePressure: v.tyre_pressure.front_left.toFixed(1),
-                tyrePressureFL: v.tyre_pressure.front_left.toFixed(1),
-                tyrePressureFR: v.tyre_pressure.front_right.toFixed(1),
-                tyrePressureRL: v.tyre_pressure.rear_left.toFixed(1),
-                tyrePressureRR: v.tyre_pressure.rear_right.toFixed(1),
-                fuel: v.fuel_level.toFixed(0),
-                cargo: '—',
-                cargoPriority: 'MEDIUM',
-                routeCondition: '—'
-              }
-            };
-          });
+              return {
+                id: v.vehicle_id,
+                driver: '—',
+                route: '—',
+                status: status,
+                telemetry: {
+                  engineTemp: v.engine_temperature.toFixed(1),
+                  speed: v.speed.toFixed(1),
+                  tyrePressure: v.tyre_pressure.front_left.toFixed(1),
+                  tyrePressureFL: v.tyre_pressure.front_left.toFixed(1),
+                  tyrePressureFR: v.tyre_pressure.front_right.toFixed(1),
+                  tyrePressureRL: v.tyre_pressure.rear_left.toFixed(1),
+                  tyrePressureRR: v.tyre_pressure.rear_right.toFixed(1),
+                  fuel: v.fuel_level.toFixed(0),
+                  cargo: '—',
+                  cargoPriority: 'MEDIUM',
+                  routeCondition: '—'
+                }
+              };
+            });
 
-          // Now fetch route info for each truck to get cargo/driver
-          for (const truck of FLEET) {
-            try {
-              const rRes = await fetch(BASE_URL + '/vehicles/' + truck.id + '/route');
-              if (rRes.ok) {
-                const route = await rRes.json();
-                truck.telemetry.cargo = route.cargo || '—';
-                truck.telemetry.cargoPriority = route.priority || 'MEDIUM';
-                truck.telemetry.routeCondition = route.route_conditions || '—';
-                truck.route = route.destination ? ('Pune \u2192 ' + route.destination) : '—';
-              }
-            } catch (e) { }
-          }
+            for (const truck of FLEET) {
+              try {
+                const rRes = await fetch(BASE_URL + '/vehicles/' + truck.id + '/route');
+                if (rRes.ok) {
+                  const route = await rRes.json();
+                  truck.telemetry.cargo = route.cargo || '—';
+                  truck.telemetry.cargoPriority = route.priority || 'MEDIUM';
+                  truck.telemetry.routeCondition = route.route_conditions || '—';
+                  truck.route = route.destination ? ('Pune → ' + route.destination) : '—';
+                }
+              } catch (e) { }
+            }
 
-          renderFleet();
-          if (!selectedId && FLEET.length > 0) {
-            selectTruck(FLEET[0].id);
+            renderFleet();
+            if (!selectedId && FLEET.length > 0) {
+              selectTruck(FLEET[0].id);
+            }
+            return;
           }
         }
       } catch (e) {
-        console.log('Backend not available, using empty fleet');
+        console.log('Backend not available, using fallback fleet');
+      }
+
+      // Fallback if backend API is unavailable or empty
+      FLEET = JSON.parse(JSON.stringify(MOCK_VEHICLES));
+      renderFleet();
+      if (!selectedId && FLEET.length > 0) {
+        selectTruck(FLEET[0].id);
       }
     }
 
