@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "main.py",
+      "src": "api/index.py",
       "use": "@vercel/python"
     },
     {
@@ -12,8 +12,16 @@
   ],
   "routes": [
     {
-      "src": "/(vehicles.*|incidents.*)",
-      "dest": "main.py"
+      "src": "/vehicles(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/incidents(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "api/index.py"
     },
     {
       "src": "/",
@@ -21,7 +29,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "main.py"
+      "dest": "index.html"
     }
   ]
 }
