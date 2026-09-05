@@ -1,7 +1,9 @@
 import yaml
 from schemas import RiskLevel, EvidenceQuality
 
-with open("policy.yaml", "r") as f:
+import os
+policy_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "policy.yaml")
+with open(policy_path, "r") as f:
     POLICY = yaml.safe_load(f)
 
 def enforce_policy(state: dict) -> dict:

@@ -15,14 +15,30 @@ client = instructor.from_groq(Groq(api_key=api_key), mode=instructor.Mode.JSON)
 MODEL = "openai/gpt-oss-20b"
 
 # Load Policy
-with open("policy.yaml", "r") as f:
+policy_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "policy.yaml")
+with open(policy_path, "r") as f:
     POLICY = yaml.safe_load(f)
 
 def run_safety_agent(vehicle_id: str) -> AgentAssessment:
     try:
-        resp = httpx.get(f"http://127.0.0.1:8000/vehicles/{vehicle_id}/telemetry")
-        resp.raise_for_status()
-        data = resp.json()
+        from simulator import VEHICLES, init_vehicles
+        from main import CUSTOM_CARGO_MAP
+        if not VEHICLES: init_vehicles()
+        v = VEHICLES.get(vehicle_id)
+        if v:
+            data = {
+                "speed": v.speed,
+                "fuel_level": v.fuel_level,
+                "engine_temperature": v.engine_temperature,
+                "tyre_pressure": v.tyre_pressure.dict(),
+                "timestamp": v.last_updated.isoformat()
+            }
+            if vehicle_id in CUSTOM_CARGO_MAP:
+                c = CUSTOM_CARGO_MAP[vehicle_id]
+                if c.get("driver_status"): data["driver_status"] = c["driver_status"]
+                if c.get("judge_notes"): data["judge_notes"] = c["judge_notes"]
+        else:
+            data = {"error": "Vehicle not found"}
     except Exception as e:
         data = {"error": str(e)}
 
@@ -58,9 +74,16 @@ def run_safety_agent(vehicle_id: str) -> AgentAssessment:
 
 def run_maintenance_agent(vehicle_id: str) -> AgentAssessment:
     try:
-        resp = httpx.get(f"http://127.0.0.1:8000/vehicles/{vehicle_id}/maintenance")
-        resp.raise_for_status()
-        data = resp.json()
+        from simulator import VEHICLES, init_vehicles
+        from main import CUSTOM_CARGO_MAP
+        if not VEHICLES: init_vehicles()
+        c = CUSTOM_CARGO_MAP.get(vehicle_id, {})
+        data = {
+            "last_service_date": c.get("last_service_date", "2026-08-01"),
+            "open_work_orders": c.get("open_work_orders", 0),
+            "last_synced": datetime.now(timezone.utc).isoformat(),
+            "status": "OK"
+        }
     except Exception as e:
         data = {"error": str(e)}
         
@@ -96,9 +119,32 @@ def run_maintenance_agent(vehicle_id: str) -> AgentAssessment:
 
 def run_operations_agent(vehicle_id: str) -> AgentAssessment:
     try:
-        resp = httpx.get(f"http://127.0.0.1:8000/vehicles/{vehicle_id}/route")
-        resp.raise_for_status()
-        data = resp.json()
+        from simulator import VEHICLES, init_vehicles
+        from main import CUSTOM_CARGO_MAP
+        if not VEHICLES: init_vehicles()
+        cargo_map = {
+            "TRUCK-1001": {"dest": "Mumbai", "cargo": "Auto Parts", "priority": "LOW", "cond": "Clear highway"},
+            "TRUCK-1002": {"dest": "Bengaluru", "cargo": "Industrial Machinery", "priority": "MEDIUM", "cond": "Heavy rain on NH48"},
+            "TRUCK-1003": {"dest": "Nashik", "cargo": "Electronics", "priority": "HIGH", "cond": "Clear, light traffic"},
+            "TRUCK-1004": {"dest": "Hyderabad", "cargo": "Perishables", "priority": "HIGH", "cond": "Heavy traffic, construction"},
+            "TRUCK-1005": {"dest": "Delhi", "cargo": "Vaccines (Expires in 4 hours)", "priority": "HIGH", "cond": "Massive traffic jam on Route 66"},
+            "TRUCK-1006": {"dest": "Kolkata", "cargo": "Chemicals", "priority": "CRITICAL", "cond": "Moderate traffic"},
+            "TRUCK-1007": {"dest": "Chennai", "cargo": "Textiles", "priority": "LOW", "cond": "Clear"},
+            "TRUCK-1008": {"dest": "Ahmedabad", "cargo": "Furniture", "priority": "LOW", "cond": "Clear"},
+            "TRUCK-1009": {"dest": "Jaipur", "cargo": "Medical Supplies", "priority": "HIGH", "cond": "Clear"},
+            "TRUCK-1010": {"dest": "Lucknow", "cargo": "Steel Pipes", "priority": "MEDIUM", "cond": "Slow moving traffic"}
+        }
+        info = CUSTOM_CARGO_MAP.get(vehicle_id, cargo_map.get(vehicle_id, {"dest": "Unknown", "cargo": "General Cargo", "priority": "LOW", "cond": "Unknown"}))
+        data = {
+            "destination": info["dest"],
+            "estimated_arrival": "17:30",
+            "cargo": info["cargo"],
+            "route_conditions": info["cond"],
+            "driver_status": info.get("driver_status", "Shift ends in 30 minutes"),
+            "judge_notes": info.get("judge_notes", ""),
+            "priority": info["priority"],
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
     except Exception as e:
         data = {"error": str(e)}
 
