@@ -6,3 +6,6 @@ langgraph
 langchain-groq
 langchain-core
 python-dotenv
+groq
+instructor
+httpx
