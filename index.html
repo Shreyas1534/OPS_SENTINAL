@@ -3801,7 +3801,22 @@
       renderAgentMeshLoader();
 
       try {
-        const res = await fetch(`${BASE_URL}/incidents/${selectedId}/investigate`, { method: 'POST' });
+        let payloadData = {};
+        if (selectedId && typeof FLEET !== 'undefined') {
+          const selTruck = FLEET.find(f => f.id === selectedId);
+          if (selTruck) {
+            payloadData = {
+              telemetry: selTruck.telemetry,
+              driver: selTruck.driver,
+              route: selTruck.route
+            };
+          }
+        }
+        const res = await fetch(`${BASE_URL}/incidents/${selectedId}/investigate`, { 
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payloadData)
+        });
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         const data = await res.json();
 

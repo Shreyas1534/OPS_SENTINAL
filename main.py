@@ -248,10 +248,60 @@ async def set_scenario(vehicle_id: str, req: ScenarioRequest):
     VEHICLES[vehicle_id].scenario = req.scenario
     return {"message": f"Scenario for {vehicle_id} set to {req.scenario.value}"}
 
+class InvestigatePayload(BaseModel):
+    telemetry: dict = None
+    driver: str = None
+    route: str = None
+
 @app.post("/incidents/{vehicle_id}/investigate")
-def trigger_investigation(vehicle_id: str):
+def trigger_investigation(vehicle_id: str, payload: InvestigatePayload = None):
+    if not VEHICLES:
+        init_vehicles()
+        
     if vehicle_id not in VEHICLES:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
+        # Dynamically auto-register truck on stateless serverless instances
+        speed, temp = 65.0, 85.0
+        fl, fr, rl, rr = 32.0, 32.0, 32.0, 32.0
+        dest, cargo, priority, cond = "Unknown", "General Cargo", "HIGH", "Normal"
+        driver_status, judge_notes = "Shift active", ""
+
+        if payload and payload.telemetry:
+            tel = payload.telemetry
+            speed = float(tel.get("speed", 65.0))
+            temp = float(tel.get("engineTemp", 85.0))
+            fl = float(tel.get("tyrePressureFL", tel.get("tyrePressure", 32.0)))
+            fr = float(tel.get("tyrePressureFR", 32.0))
+            rl = float(tel.get("tyrePressureRL", 32.0))
+            rr = float(tel.get("tyrePressureRR", 32.0))
+            cargo = tel.get("cargo", "General Cargo")
+            priority = tel.get("cargoPriority", "HIGH")
+            cond = tel.get("routeCondition", "Normal")
+            driver_status = tel.get("driver_status", "Shift active")
+            judge_notes = tel.get("judge_notes", "")
+
+        CUSTOM_CARGO_MAP[vehicle_id] = {
+            "dest": dest,
+            "cargo": cargo,
+            "priority": priority,
+            "cond": cond,
+            "driver": payload.driver if payload else "Driver",
+            "driver_status": driver_status,
+            "open_work_orders": 0,
+            "last_service_date": "2026-08-01",
+            "judge_notes": judge_notes
+        }
+            
+        VEHICLES[vehicle_id] = Vehicle(
+            vehicle_id=vehicle_id,
+            location=Location(lat=18.5204, lng=73.8567),
+            speed=speed,
+            fuel_level=80.0,
+            engine_temperature=temp,
+            tyre_pressure=TyrePressure(front_left=fl, front_right=fr, rear_left=rl, rear_right=rr),
+            status=VehicleStatus.ACTIVE,
+            scenario=Scenario.NORMAL,
+            last_updated=datetime.now(timezone.utc)
+        )
         
     initial_state = {
         "vehicle_id": vehicle_id,
