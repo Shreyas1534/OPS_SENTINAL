@@ -2273,7 +2273,8 @@
       pointer-events: auto !important;
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
     /* SYSTEM ARCHITECTURE MODAL LISTENERS */
     document.getElementById('open-arch-modal-btn').addEventListener('click', () => {
       document.getElementById('arch-modal-overlay').classList.add('show');
@@ -2370,9 +2371,28 @@
       if (btn) {
         btn.addEventListener('click', openArchModal);
       }
+      const traceBtn = document.getElementById('header-trace-btn');
+      if (traceBtn) {
+        traceBtn.addEventListener('click', openTraceModal);
+      }
       const closeBtn = document.getElementById('arch-modal-close');
       if (closeBtn) {
         closeBtn.addEventListener('click', closeArchModal);
+      }
+      const traceCloseBtn = document.getElementById('trace-modal-close');
+      if (traceCloseBtn) {
+        traceCloseBtn.addEventListener('click', closeTraceModal);
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const overlay = document.getElementById('trace-modal-overlay');
+      if (overlay && e.target === overlay) {
+        closeTraceModal();
+      }
+      const archOverlay = document.getElementById('arch-modal-overlay');
+      if (archOverlay && e.target === archOverlay) {
+        closeArchModal();
       }
     });
 
