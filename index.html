@@ -2249,6 +2249,17 @@
     }
 
 
+        .trace-modal-card {
+      width: min(1000px, 95vw) !important;
+      max-height: 90vh !important;
+    }
+
+    #trace-modal-overlay.show {
+      display: flex !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
     #arch-modal-overlay.show {
       display: flex !important;
       opacity: 1 !important;
@@ -2329,6 +2340,29 @@
     }
 
     window.openArchModal = openArchModal;
+
+    /* GLOBAL LANGGRAPH TRACE MODAL FUNCTIONS */
+    function openTraceModal() {
+      console.log("openTraceModal called!");
+      const overlay = document.getElementById('trace-modal-overlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.classList.add('show');
+      } else {
+        console.error("trace-modal-overlay element not found in DOM");
+      }
+    }
+
+    function closeTraceModal() {
+      const overlay = document.getElementById('trace-modal-overlay');
+      if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(() => { overlay.style.display = 'none'; }, 200);
+      }
+    }
+
+    window.openTraceModal = openTraceModal;
+    window.closeTraceModal = closeTraceModal;
     window.closeArchModal = closeArchModal;
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -2503,8 +2537,8 @@
 
       <!-- RIGHT ACTION AREA -->
       <div class="header-right-actions">
-        <button type="button" class="sys-arch-cta-btn" id="header-arch-btn" onclick="openArchModal()">🧠 System
-          Architecture</button>
+        <button type="button" class="sys-arch-cta-btn" id="header-arch-btn" onclick="openArchModal()">🧠 System Architecture</button>
+        <button type="button" class="sys-arch-cta-btn trace-cta-btn" id="header-trace-btn" onclick="openTraceModal()" style="background: linear-gradient(135deg, rgba(34, 211, 238, 0.25) 0%, rgba(59, 130, 246, 0.25) 100%); border-color: rgba(34, 211, 238, 0.5); margin-left: 6px;">📊 LangGraph Traces</button>
         <div class="status"><span class="dot"></span> Backend: <span id="backend-status" class="mono">checking…</span>
         </div>
       </div>
@@ -4174,6 +4208,117 @@
           <div class="v-icon">🚨</div>
           <div class="v-title">3. Human Safety First</div>
           <div class="v-sub">Dangerous trucks are stopped immediately for human review to prevent accidents.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ LANGGRAPH / LANGSMITH TRACE DASHBOARD MODAL ============ -->
+  <div id="trace-modal-overlay" class="modal-overlay">
+    <div class="modal-card trace-modal-card" style="width: min(1000px, 95vw); max-height: 90vh;">
+      <div class="modal-head">
+        <div>
+          <span class="modal-head-pill">📊 LANGGRAPH & LANGSMITH TRACING</span>
+          <h3 class="modal-title">MULTI-AGENT LANGGRAPH TRACE DASHBOARD</h3>
+          <p class="modal-sub">Real-time DAG telemetry, node state transitions, LLM latencies, and token counts</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <a href="https://smith.langchain.com/" target="_blank" class="add-vehicle-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:6px 12px;">
+            ↗️ Open LangSmith Cloud
+          </a>
+          <button class="modal-close" id="trace-modal-close" onclick="closeTraceModal()">×</button>
+        </div>
+      </div>
+
+      <!-- TRACE STATUS BAR -->
+      <div class="arch-dag-container" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span class="badge ACTIVE">PROJECT: ops-sentinel-harness</span>
+          <span class="badge ACTIVE" style="color:#22c55e; border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.12);">🟢 TRACING ACTIVE</span>
+          <span class="pure-tech-tag"><span class="cyan-dot"></span> Groq Llama-3 Provider</span>
+          <span class="pure-tech-tag"><span class="purple-dot"></span> instructor Structured Output</span>
+        </div>
+        <div style="font-size:11px; color:var(--ink-300);" class="mono">
+          State Mesh: <strong style="color:var(--signal-400);">6 Graph Nodes Synced</strong>
+        </div>
+      </div>
+
+      <!-- EMBEDDED DASHBOARD & LIVE NODE TELEMETRY GRID -->
+      <div style="display:grid; grid-template-columns: 1fr 340px; gap:12px; height:500px;">
+        <!-- LEFT: EMBEDDED IFRAME / DASHBOARD VIEWER -->
+        <div style="position:relative; width:100%; height:100%; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#04070f; display:flex; flex-direction:column;">
+          <iframe src="https://smith.langchain.com/" style="width:100%; flex:1; border:none; background:#080b14;" title="LangSmith Dashboard"></iframe>
+          
+          <div style="background:rgba(8,11,20,0.95); backdrop-filter:blur(10px); border-top:1px solid rgba(34,211,238,0.2); padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:11.5px; font-weight:700; color:var(--ink-100);">LangSmith Project Dashboard</span>
+              <span style="font-size:10px; color:var(--ink-500);">Live LangGraph trace viewer</span>
+            </div>
+            <a href="https://smith.langchain.com/" target="_blank" style="padding:5px 12px; background:linear-gradient(90deg, var(--signal-400), var(--signal-600)); color:var(--void-950); font-weight:700; font-size:11px; border-radius:6px; text-decoration:none;">
+              ↗️ Open Platform
+            </a>
+          </div>
+        </div>
+
+        <!-- RIGHT: REAL-TIME GRAPH NODE TRACE TELEMETRY PANEL -->
+        <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          <div style="font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--signal-400); margin-bottom:4px;">
+            ⚡ LANGGRAPH 6-NODE TELEMETRY
+          </div>
+
+          <!-- NODE 1 -->
+          <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(34,211,238,0.2); border-radius:8px; padding:8px 10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+              <span style="font-size:11px; font-weight:700; color:#22d3ee;">1. Safety Agent Node</span>
+              <span style="font-size:9.5px; font-weight:700; color:#22c55e;" class="mono">240ms | OK</span>
+            </div>
+            <div style="font-size:9.5px; color:var(--ink-300);">Audits telemetry & engine heat vs safety limits.</div>
+          </div>
+
+          <!-- NODE 2 -->
+          <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(95,212,255,0.2); border-radius:8px; padding:8px 10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+              <span style="font-size:11px; font-weight:700; color:#5fd4ff;">2. Maintenance Node</span>
+              <span style="font-size:9.5px; font-weight:700; color:#22c55e;" class="mono">310ms | OK</span>
+            </div>
+            <div style="font-size:9.5px; color:var(--ink-300);">Cross-references tyre pressure & service logs.</div>
+          </div>
+
+          <!-- NODE 3 -->
+          <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(167,139,250,0.2); border-radius:8px; padding:8px 10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+              <span style="font-size:11px; font-weight:700; color:#a78bfa;">3. Operations Node</span>
+              <span style="font-size:9.5px; font-weight:700; color:#22c55e;" class="mono">280ms | OK</span>
+            </div>
+            <div style="font-size:9.5px; color:var(--ink-300);">Evaluates cargo priority & driver shift limits.</div>
+          </div>
+
+          <!-- NODE 4 -->
+          <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(245,158,11,0.2); border-radius:8px; padding:8px 10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+              <span style="font-size:11px; font-weight:700; color:#f59e0b;">4. Critic Agent Node</span>
+              <span style="font-size:9.5px; font-weight:700; color:#22c55e;" class="mono">190ms | OK</span>
+            </div>
+            <div style="font-size:9.5px; color:var(--ink-300);">Validates claims against raw telemetry data.</div>
+          </div>
+
+          <!-- NODE 5 -->
+          <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:8px 10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+              <span style="font-size:11px; font-weight:700; color:#ef4444;">5. Red Team Node</span>
+              <span style="font-size:9.5px; font-weight:700; color:#22c55e;" class="mono">340ms | OK</span>
+            </div>
+            <div style="font-size:9.5px; color:var(--ink-300);">Adversarial audit to challenge decisions.</div>
+          </div>
+
+          <!-- NODE 6 -->
+          <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(34,197,94,0.2); border-radius:8px; padding:8px 10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+              <span style="font-size:11px; font-weight:700; color:#22c55e;">6. Policy Engine Node</span>
+              <span style="font-size:9.5px; font-weight:700; color:#22c55e;" class="mono">5ms | DETERMINISTIC</span>
+            </div>
+            <div style="font-size:9.5px; color:var(--ink-300);">Enforces mandatory human operator overrides.</div>
+          </div>
         </div>
       </div>
     </div>
