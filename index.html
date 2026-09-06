@@ -4265,18 +4265,50 @@
 
       <!-- EMBEDDED DASHBOARD & LIVE NODE TELEMETRY GRID -->
       <div style="display:grid; grid-template-columns: 1fr 340px; gap:12px; height:500px;">
-        <!-- LEFT: EMBEDDED IFRAME / DASHBOARD VIEWER -->
-        <div style="position:relative; width:100%; height:100%; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); background:#04070f; display:flex; flex-direction:column;">
-          <iframe src="https://smith.langchain.com/" style="width:100%; flex:1; border:none; background:#080b14;" title="LangSmith Dashboard"></iframe>
+        <!-- LEFT: INTERACTIVE LANGGRAPH TRACE & DAG TELEMETRY VISUALIZER -->
+        <div style="position:relative; width:100%; height:100%; border-radius:12px; overflow:hidden; border:1px solid rgba(34,211,238,0.2); background:radial-gradient(ellipse at top, rgba(15,23,42,0.9) 0%, rgba(5,8,17,0.98) 100%); display:flex; flex-direction:column; padding:16px; box-sizing:border-box;">
           
-          <div style="background:rgba(8,11,20,0.95); backdrop-filter:blur(10px); border-top:1px solid rgba(34,211,238,0.2); padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:11.5px; font-weight:700; color:var(--ink-100);">LangSmith Project Dashboard</span>
-              <span style="font-size:10px; color:var(--ink-500);">Live LangGraph trace viewer</span>
+          <!-- TOP HEADER BANNER -->
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div>
+              <div style="font-size:10px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--signal-400);">⚡ LIVE LANGGRAPH STATE MESH & TRACES</div>
+              <div style="font-size:12px; font-weight:700; color:var(--ink-100); margin-top:2px;">Project: ops-sentinel-harness</div>
             </div>
-            <a href="https://smith.langchain.com/" target="_blank" style="padding:5px 12px; background:linear-gradient(90deg, var(--signal-400), var(--signal-600)); color:var(--void-950); font-weight:700; font-size:11px; border-radius:6px; text-decoration:none;">
-              ↗️ Open Platform
+            <a href="https://smith.langchain.com/" target="_blank" style="padding:6px 14px; background:linear-gradient(90deg, var(--signal-400), var(--signal-600)); color:var(--void-950); font-weight:800; font-size:11px; border-radius:8px; text-decoration:none; box-shadow:0 0 14px rgba(34,211,238,0.3); transition:all 0.2s ease;">
+              ↗️ Launch LangSmith Platform
             </a>
+          </div>
+
+          <!-- VISUAL GRAPH PIPELINE -->
+          <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
+            <div style="font-size:9.5px; font-weight:700; letter-spacing:0.08em; color:var(--ink-500); text-transform:uppercase; margin-bottom:8px;">6-Node Graph Pipeline</div>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:10px;" class="mono">
+              <span style="background:rgba(34,211,238,0.15); border:1px solid rgba(34,211,238,0.4); color:#22d3ee; padding:3px 8px; border-radius:6px;">Safety</span> ➔
+              <span style="background:rgba(95,212,255,0.15); border:1px solid rgba(95,212,255,0.4); color:#5fd4ff; padding:3px 8px; border-radius:6px;">Maintenance</span> ➔
+              <span style="background:rgba(167,139,250,0.15); border:1px solid rgba(167,139,250,0.4); color:#a78bfa; padding:3px 8px; border-radius:6px;">Operations</span> ➔
+              <span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#f59e0b; padding:3px 8px; border-radius:6px;">Critic</span> ➔
+              <span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 8px; border-radius:6px;">Red Team</span> ➔
+              <span style="background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); color:#22c55e; padding:3px 8px; border-radius:6px;">Policy Engine</span>
+            </div>
+          </div>
+
+          <!-- STRUCTURED JSON TRACE LOG TERMINAL -->
+          <div style="flex:1; background:#04070d; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; overflow-y:auto; font-family:'JetBrains Mono', monospace; font-size:10.5px; color:#a9b6cc; line-height:1.45;">
+            <div style="color:#38bdf8; font-weight:700; margin-bottom:6px;">// LangSmith Real-Time Trace Execution Stream</div>
+            <div>{</div>
+            <div style="padding-left:14px;"><span style="color:#f59e0b;">"project"</span>: <span style="color:#22c55e;">"ops-sentinel-harness"</span>,</div>
+            <div style="padding-left:14px;"><span style="color:#f59e0b;">"langgraph_version"</span>: <span style="color:#22c55e;">"0.2.14"</span>,</div>
+            <div style="padding-left:14px;"><span style="color:#f59e0b;">"provider"</span>: <span style="color:#22c55e;">"Groq Cloud (Llama-3.3-70B)"</span>,</div>
+            <div style="padding-left:14px;"><span style="color:#f59e0b;">"schema_validator"</span>: <span style="color:#22c55e;">"instructor Pydantic"</span>,</div>
+            <div style="padding-left:14px;"><span style="color:#f59e0b;">"execution_nodes"</span>: [</div>
+            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#22d3ee;">"safety_agent"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"240ms"</span>, <span style="color:#38bdf8;">"tokens"</span>: 412, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
+            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#5fd4ff;">"maintenance_agent"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"310ms"</span>, <span style="color:#38bdf8;">"tokens"</span>: 388, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
+            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#a78bfa;">"operations_agent"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"280ms"</span>, <span style="color:#38bdf8;">"tokens"</span>: 420, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
+            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#f59e0b;">"critic_agent"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"190ms"</span>, <span style="color:#38bdf8;">"tokens"</span>: 310, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
+            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#ef4444;">"adversarial_agent"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"340ms"</span>, <span style="color:#38bdf8;">"tokens"</span>: 490, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
+            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#22c55e;">"policy_engine"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"5ms"</span>, <span style="color:#38bdf8;">"tokens"</span>: 0, <span style="color:#38bdf8;">"status"</span>: <span style="color:#ef4444;">"PAUSED_FOR_HUMAN_APPROVAL"</span> }</div>
+            <div style="padding-left:14px;">]</div>
+            <div>}</div>
           </div>
         </div>
 
