@@ -4379,21 +4379,29 @@
           <!-- TAB 1 VIEW: GRAPH STATE TERMINAL -->
           <div id="trace-view-graph" style="display:block; flex:1;">
             <div id="modal-json-terminal" style="height:260px; background:#04070d; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; overflow-y:auto; font-family:'JetBrains Mono', monospace; font-size:10.5px; color:#a9b6cc; line-height:1.45;">
-            <div style="color:#38bdf8; font-weight:700; margin-bottom:6px;">// LangSmith Real-Time Trace Execution Stream</div>
-            <div>{</div>
-            <div style="padding-left:14px;"><span style="color:#f59e0b;">"project"</span>: <span style="color:#22c55e;">"ops-sentinel-harness"</span>,</div>
-            <div style="padding-left:14px;"><span style="color:#f59e0b;">"langgraph_version"</span>: <span style="color:#22c55e;">"0.2.14"</span>,</div>
-            <div style="padding-left:14px;"><span style="color:#f59e0b;">"provider"</span>: <span style="color:#22c55e;">"Groq Cloud (Llama-3.3-70B)"</span>,</div>
-            <div style="padding-left:14px;"><span style="color:#f59e0b;">"schema_validator"</span>: <span style="color:#22c55e;">"instructor Pydantic"</span>,</div>
-            <div style="padding-left:14px;"><span style="color:#f59e0b;">"execution_nodes"</span>: [</div>
-            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#22d3ee;">"safety"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"2.13s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 412, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
-            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#5fd4ff;">"maintenance"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"0.65s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 388, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
-            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#a78bfa;">"operations"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"0.85s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 420, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
-            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#f59e0b;">"critic"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"1.23s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 310, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
-            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#ef4444;">"adversarial"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"1.04s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 490, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
-            <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#22c55e;">"decision"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"8.59s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 0, <span style="color:#38bdf8;">"status"</span>: <span style="color:#ef4444;">"PAUSED_FOR_HUMAN_APPROVAL"</span> }</div>
-            <div style="padding-left:14px;">]</div>
-            <div>}</div>
+              <div style="color:#38bdf8; font-weight:700; margin-bottom:6px;">// LangSmith Real-Time Trace Execution Stream</div>
+              <div>{</div>
+              <div style="padding-left:14px;"><span style="color:#f59e0b;">"project"</span>: <span style="color:#22c55e;">"ops-sentinel-harness"</span>,</div>
+              <div style="padding-left:14px;"><span style="color:#f59e0b;">"langgraph_version"</span>: <span style="color:#22c55e;">"0.2.14"</span>,</div>
+              <div style="padding-left:14px;"><span style="color:#f59e0b;">"provider"</span>: <span style="color:#22c55e;">"Groq Cloud (Llama-3.3-70B)"</span>,</div>
+              <div style="padding-left:14px;"><span style="color:#f59e0b;">"schema_validator"</span>: <span style="color:#22c55e;">"instructor Pydantic"</span>,</div>
+              <div style="padding-left:14px;"><span style="color:#f59e0b;">"execution_nodes"</span>: [</div>
+              <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#22d3ee;">"safety"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"2.13s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 412, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
+              <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#5fd4ff;">"maintenance"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"0.65s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 388, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
+              <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#a78bfa;">"operations"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"0.85s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 420, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
+              <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#f59e0b;">"critic"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"1.23s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 310, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
+              <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#ef4444;">"adversarial"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"1.04s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 490, <span style="color:#38bdf8;">"status"</span>: <span style="color:#22c55e;">"200 OK"</span> },</div>
+              <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#22c55e;">"decision"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"8.59s"</span>, <span style="color:#38bdf8;">"tokens"</span>: 0, <span style="color:#38bdf8;">"status"</span>: <span style="color:#ef4444;">"PAUSED_FOR_HUMAN_APPROVAL"</span> }</div>
+              <div style="padding-left:14px;">]</div>
+              <div>}</div>
+            </div>
+          </div>
+
+          <!-- TAB 2 VIEW: LIVE AGENT DEBATE STREAM -->
+          <div id="trace-view-debate" style="display:none; flex:1; overflow-y:auto; max-height:260px; padding-right:4px;">
+            <div id="modal-debate-stream">
+              <div style="font-size:11px; color:var(--ink-500); padding:12px; text-align:center;">Trigger an investigation on the main dashboard to view live agent debate messages.</div>
+            </div>
           </div>
         </div>
 
