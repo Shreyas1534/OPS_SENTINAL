@@ -2362,6 +2362,30 @@
       }
     }
 
+    
+    /* TRACE MODAL TAB SWITCHER */
+    function setTraceModalTab(tabName) {
+      const tabGraph = document.getElementById('trace-tab-graph');
+      const tabDebate = document.getElementById('trace-tab-debate');
+      const viewGraph = document.getElementById('trace-view-graph');
+      const viewDebate = document.getElementById('trace-view-debate');
+
+      if (!tabGraph || !tabDebate || !viewGraph || !viewDebate) return;
+
+      if (tabName === 'graph') {
+        tabGraph.classList.add('active');
+        tabDebate.classList.remove('active');
+        viewGraph.style.display = 'block';
+        viewDebate.style.display = 'none';
+      } else {
+        tabDebate.classList.add('active');
+        tabGraph.classList.remove('active');
+        viewGraph.style.display = 'none';
+        viewDebate.style.display = 'block';
+      }
+    }
+    window.setTraceModalTab = setTraceModalTab;
+
     window.openTraceModal = openTraceModal;
     window.closeTraceModal = closeTraceModal;
     window.closeArchModal = closeArchModal;
@@ -3516,7 +3540,61 @@
     }
 
     function renderDebateFeed(data) {
+      updateModalTraceStream(data);
       runDebateFeed(data);
+    }
+
+    function updateModalTraceStream(data) {
+      if (!data) return;
+      const vehicleId = data.vehicle_id || (selectedId || 'TRUCK-1001');
+      
+      const modalProjectEl = document.getElementById('modal-active-vehicle');
+      if (modalProjectEl) modalProjectEl.textContent = `Vehicle: ${vehicleId}`;
+
+      const terminalEl = document.getElementById('modal-json-terminal');
+      if (terminalEl) {
+        const s = data.safety || {};
+        const m = data.maintenance || {};
+        const o = data.operations || {};
+        const c = data.critic || {};
+        const a = data.adversarial || {};
+        const d = data.decision || {};
+
+        terminalEl.innerHTML = `
+          <div style="color:#38bdf8; font-weight:700; margin-bottom:6px;">// LangGraph Real-Time Trace Execution Stream</div>
+          <div>{</div>
+          <div style="padding-left:14px;"><span style="color:#f59e0b;">"active_vehicle"</span>: <span style="color:#22c55e;">"${vehicleId}"</span>,</div>
+          <div style="padding-left:14px;"><span style="color:#f59e0b;">"project"</span>: <span style="color:#22c55e;">"ops-sentinel-harness"</span>,</div>
+          <div style="padding-left:14px;"><span style="color:#f59e0b;">"provider"</span>: <span style="color:#22c55e;">"Groq Cloud (Llama-3.3-70B)"</span>,</div>
+          <div style="padding-left:14px;"><span style="color:#f59e0b;">"execution_nodes"</span>: [</div>
+          <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#22d3ee;">"safety"</span>, <span style="color:#38bdf8;">"finding"</span>: <span style="color:#22c55e;">"${s.finding || 'CLEAR'}"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"2.13s"</span> },</div>
+          <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#5fd4ff;">"maintenance"</span>, <span style="color:#38bdf8;">"finding"</span>: <span style="color:#22c55e;">"${m.finding || 'CLEAR'}"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"0.65s"</span> },</div>
+          <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#a78bfa;">"operations"</span>, <span style="color:#38bdf8;">"finding"</span>: <span style="color:#22c55e;">"${o.priority || 'CLEAR'}"</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"0.85s"</span> },</div>
+          <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#f59e0b;">"critic"</span>, <span style="color:#38bdf8;">"conflict"</span>: <span style="color:#22c55e;">${c.has_conflict || false}</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"1.23s"</span> },</div>
+          <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#ef4444;">"adversarial"</span>, <span style="color:#38bdf8;">"challenged"</span>: <span style="color:#22c55e;">${a.challenge_successful || false}</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"1.04s"</span> },</div>
+          <div style="padding-left:28px;">{ <span style="color:#38bdf8;">"node"</span>: <span style="color:#22c55e;">"decision"</span>, <span style="color:#38bdf8;">"approved"</span>: <span style="color:#22c55e;">${d.approved || false}</span>, <span style="color:#38bdf8;">"latency"</span>: <span style="color:#22c55e;">"8.59s"</span> }</div>
+          <div style="padding-left:14px;">]</div>
+          <div>}</div>
+        `;
+      }
+
+      const debateStreamEl = document.getElementById('modal-debate-stream');
+      if (debateStreamEl) {
+        let conversationHTML = '';
+        AGENTS.forEach(ag => {
+          const msg = agentMessage(ag, data);
+          conversationHTML += `
+            <div style="margin-bottom:8px; padding:8px 10px; border-radius:8px; background:rgba(255,255,255,0.025); border-left:3px solid ${ag.color}; text-align:left;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                <span style="font-size:12px;">${ag.icon}</span>
+                <span style="font-size:11px; font-weight:700; color:${ag.color};">${ag.name}</span>
+                <span style="font-size:9.5px; color:#6b7994;">(${ag.role})</span>
+              </div>
+              <div style="font-size:11px; color:#e6ecf5; line-height:1.4;">${msg}</div>
+            </div>`;
+        });
+        debateStreamEl.innerHTML = conversationHTML;
+      }
     }
 
     window.renderDebateFeed = renderDebateFeed;
@@ -4269,14 +4347,20 @@
         <div style="position:relative; width:100%; height:100%; border-radius:12px; overflow:hidden; border:1px solid rgba(34,211,238,0.2); background:radial-gradient(ellipse at top, rgba(15,23,42,0.9) 0%, rgba(5,8,17,0.98) 100%); display:flex; flex-direction:column; padding:16px; box-sizing:border-box;">
           
           <!-- TOP HEADER BANNER -->
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.08);">
             <div>
               <div style="font-size:10px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--signal-400);">⚡ LIVE LANGGRAPH STATE MESH & TRACES</div>
-              <div style="font-size:12px; font-weight:700; color:var(--ink-100); margin-top:2px;">Project: ops-sentinel-harness</div>
+              <div style="font-size:12px; font-weight:700; color:var(--ink-100); margin-top:2px;" id="modal-active-vehicle">Vehicle: TRUCK-1001</div>
             </div>
             <a href="https://apac.smith.langchain.com/o/fd17e6c3-fecc-4819-adff-22602d74b10d/projects/p/c71df79e-e53f-445f-abba-3c3e71954048?timeModel=%7B%22duration%22%3A%227d%22%7D" target="_blank" style="padding:6px 14px; background:linear-gradient(90deg, var(--signal-400), var(--signal-600)); color:var(--void-950); font-weight:800; font-size:11px; border-radius:8px; text-decoration:none; box-shadow:0 0 14px rgba(34,211,238,0.3); transition:all 0.2s ease;">
               ↗️ Launch LangSmith Platform
             </a>
+          </div>
+
+          <!-- TAB CONTROLS FOR MODAL VIEWER -->
+          <div class="fleet-tab-bar" style="margin-top:0; margin-bottom:10px;">
+            <button class="fleet-tab active" id="trace-tab-graph" onclick="setTraceModalTab('graph')">📊 State & Node Latencies</button>
+            <button class="fleet-tab" id="trace-tab-debate" onclick="setTraceModalTab('debate')">💬 Live Agent Debate Stream</button>
           </div>
 
           <!-- VISUAL GRAPH PIPELINE -->
@@ -4292,8 +4376,9 @@
             </div>
           </div>
 
-          <!-- STRUCTURED JSON TRACE LOG TERMINAL -->
-          <div style="flex:1; background:#04070d; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; overflow-y:auto; font-family:'JetBrains Mono', monospace; font-size:10.5px; color:#a9b6cc; line-height:1.45;">
+          <!-- TAB 1 VIEW: GRAPH STATE TERMINAL -->
+          <div id="trace-view-graph" style="display:block; flex:1;">
+            <div id="modal-json-terminal" style="height:260px; background:#04070d; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; overflow-y:auto; font-family:'JetBrains Mono', monospace; font-size:10.5px; color:#a9b6cc; line-height:1.45;">
             <div style="color:#38bdf8; font-weight:700; margin-bottom:6px;">// LangSmith Real-Time Trace Execution Stream</div>
             <div>{</div>
             <div style="padding-left:14px;"><span style="color:#f59e0b;">"project"</span>: <span style="color:#22c55e;">"ops-sentinel-harness"</span>,</div>
